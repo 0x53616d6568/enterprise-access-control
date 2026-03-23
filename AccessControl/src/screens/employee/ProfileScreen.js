@@ -12,8 +12,13 @@ export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Generate initials for the avatar placeholder
   const initials = user?.full_name
-    ?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+    ?.split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
 
   const getRoleBadge = (level) => {
     if (level >= 5) return { label: 'Administrator', color: colors.accentText,    bg: colors.bgDeep,    border: colors.accentDark };
@@ -23,10 +28,53 @@ export default function ProfileScreen({ navigation }) {
 
   const roleBadge = getRoleBadge(user?.access_level);
 
-  const MENU_ITEMS = [
-    { key: 'security',      label: 'Security & BLE token',  icon: 'shield-checkmark-outline', color: colors.accentText,  bg: colors.bgDeep,    border: colors.accentDark,    onPress: () => navigation.navigate('BLEToken') },
-    { key: 'notifications', label: 'Notifications',         icon: 'notifications-outline',    color: colors.success,     bg: colors.successBg, border: colors.successBorder, onPress: () => navigation.navigate('NotificationSettings') },
-    { key: 'appearance',    label: 'Appearance',            icon: 'sunny-outline',            color: colors.warning,     bg: colors.warningBg, border: colors.warningBorder, onPress: () => navigation.navigate('Appearance') },
+  const SETTINGS_GROUPS = [
+    {
+      title: 'Security & Access',
+      items: [
+        { 
+          key: 'security', 
+          label: 'Security & BLE token', 
+          icon: 'shield-checkmark-outline', 
+          color: colors.accentText, 
+          bg: colors.bgDeep, 
+          border: colors.accentDark, 
+          onPress: () => navigation.navigate('BLEToken') 
+        },
+        { 
+          key: 'password', 
+          label: 'Change Password', 
+          icon: 'key-outline', 
+          color: colors.warning, 
+          bg: colors.warningBg, 
+          border: colors.warningBorder, 
+          onPress: () => navigation.navigate('ChangePassword') 
+        },
+      ]
+    },
+    {
+      title: 'Preferences',
+      items: [
+        { 
+          key: 'notifications', 
+          label: 'Notifications', 
+          icon: 'notifications-outline', 
+          color: colors.success, 
+          bg: colors.successBg, 
+          border: colors.successBorder, 
+          onPress: () => navigation.navigate('NotificationSettings') 
+        },
+        { 
+          key: 'appearance', 
+          label: 'Appearance', 
+          icon: 'sunny-outline', 
+          color: colors.warning, 
+          bg: colors.warningBg, 
+          border: colors.warningBorder, 
+          onPress: () => navigation.navigate('Appearance') 
+        },
+      ]
+    }
   ];
 
   const handleLogout = () => {
@@ -36,9 +84,8 @@ export default function ProfileScreen({ navigation }) {
         text: 'Sign out', style: 'destructive',
         onPress: async () => {
           setLoggingOut(true);
-          try { await logout(); }
-          catch (err) { console.log('Logout error:', err.message); }
-          finally { setLoggingOut(false); }
+          await logout();
+          setLoggingOut(false);
         },
       },
     ]);
@@ -47,24 +94,29 @@ export default function ProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-
-        {/* Profile hero */}
+        
         <View style={styles.hero}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <TouchableOpacity style={styles.editBadge} activeOpacity={0.8}>
+              <Ionicons name="camera-outline" size={14} color="#fff" />
+            </TouchableOpacity>
           </View>
+          
           <View style={styles.heroInfo}>
             <Text style={styles.name}>{user?.full_name}</Text>
-            <Text style={styles.email}>{user?.department} · {user?.email}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
             <View style={[styles.roleBadge, { backgroundColor: roleBadge.bg, borderColor: roleBadge.border }]}>
-              <Ionicons name="person-outline" size={10} color={roleBadge.color} />
+              <Ionicons name="shield-checkmark-outline" size={10} color={roleBadge.color} />
               <Text style={[styles.roleText, { color: roleBadge.color }]}>{roleBadge.label}</Text>
             </View>
           </View>
         </View>
 
-        {/* Account info */}
-        <Text style={styles.sectionLabel}>Account info</Text>
+        <Text style={styles.sectionLabel}>Account Info</Text>
+        {/* FIXED: Changed <div> to <View> */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
             <View style={styles.infoLeft}>
@@ -88,50 +140,63 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.infoValue}>
               {user?.last_login
                 ? new Date(user.last_login).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : 'Now'}
+                : 'Active Now'}
             </Text>
           </View>
         </View>
 
-        {/* Settings */}
-        <Text style={styles.sectionLabel}>Settings</Text>
-        <View style={styles.menuCard}>
-          {MENU_ITEMS.map((item, i) => (
-            <TouchableOpacity
-              key={item.key}
-              style={[styles.menuRow, i === MENU_ITEMS.length - 1 && { borderBottomWidth: 0 }]}
-              onPress={item.onPress}
-            >
-              <View style={styles.menuLeft}>
-                <View style={[styles.menuIcon, { backgroundColor: item.bg, borderColor: item.border }]}>
-                  <Ionicons name={item.icon} size={14} color={item.color} />
-                </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          ))}
+        {SETTINGS_GROUPS.map((group) => (
+          <View key={group.title} style={{ marginBottom: 24 }}>
+            <Text style={styles.sectionLabel}>{group.title}</Text>
+            <View style={styles.menuCard}>
+              {group.items.map((item, i) => (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[styles.menuRow, i === group.items.length - 1 && { borderBottomWidth: 0 }]}
+                  onPress={item.onPress}
+                >
+                  <View style={styles.menuLeft}>
+                    <View style={[styles.menuIcon, { backgroundColor: item.bg, borderColor: item.border }]}>
+                      <Ionicons name={item.icon} size={14} color={item.color} />
+                    </View>
+                    <Text style={styles.menuLabel}>{item.label}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
 
-          {/* Sign out */}
-          <TouchableOpacity
-            style={[styles.menuRow, { borderBottomWidth: 0 }]}
-            onPress={handleLogout}
+        <Text style={styles.sectionLabel}>Support</Text>
+        <View style={styles.menuCard}>
+          <TouchableOpacity style={styles.menuRow}>
+            <View style={styles.menuLeft}>
+              <View style={[styles.menuIcon, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Ionicons name="help-circle-outline" size={14} color={colors.textSecondary} />
+              </View>
+              <Text style={styles.menuLabel}>Help Center</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.menuRow, { borderBottomWidth: 0 }]} 
+            onPress={handleLogout} 
             disabled={loggingOut}
           >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
-                {loggingOut
-                  ? <ActivityIndicator size="small" color={colors.danger} />
+                {loggingOut 
+                  ? <ActivityIndicator size="small" color={colors.danger} /> 
                   : <Ionicons name="log-out-outline" size={14} color={colors.danger} />
                 }
               </View>
               <Text style={[styles.menuLabel, { color: colors.danger }]}>Sign out</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.danger} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>Enterprise Access Control · v1.0.0</Text>
+        <Text style={styles.version}>Enterprise Access Control · v1.1.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -141,24 +206,26 @@ const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: colors.bg },
   container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
   hero:      { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
-  avatar:    { width: 64, height: 64, borderRadius: 20, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.accentText, fontSize: 22, fontWeight: '500' },
+  avatarContainer: { position: 'relative' },
+  avatar:    { width: 68, height: 68, borderRadius: 22, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: colors.accentText, fontSize: 24, fontWeight: '600' },
+  editBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: colors.accent, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.bg },
   heroInfo:  { flex: 1 },
-  name:      { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3, marginBottom: 3 },
+  name:      { color: colors.textPrimary, fontSize: 19, fontWeight: '600', letterSpacing: -0.4, marginBottom: 2 },
   email:     { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  roleText:  { fontSize: 11 },
-  sectionLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
-  infoCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
-  infoRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 13, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  roleText:  { fontSize: 11, fontWeight: '500' },
+  sectionLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4 },
+  infoCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden', marginBottom: 24 },
+  infoRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   infoLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoIcon:  { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   infoLabel: { color: colors.textSecondary, fontSize: 13 },
-  infoValue: { color: colors.textPrimary, fontSize: 13 },
-  menuCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
+  infoValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
+  menuCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden' },
   menuRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  menuIcon:  { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  menuLabel: { color: colors.textPrimary, fontSize: 13 },
-  version:   { textAlign: 'center', color: '#3D444D', fontSize: 11 },
+  menuLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuIcon:  { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  menuLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '400' },
+  version:   { textAlign: 'center', color: '#3D444D', fontSize: 11, marginTop: 32 },
 });

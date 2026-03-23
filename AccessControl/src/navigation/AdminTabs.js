@@ -4,26 +4,29 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../constants/colors';
 
+// Screen Imports
 import DashboardScreen      from '../screens/employee/DashboardScreen';
 import UsersScreen          from '../screens/admin/UsersScreen';
-import AddUserScreen        from '../screens/admin/AddUserScreen';
-import DoorsScreen          from '../screens/admin/DoorsScreen';
-import AddDoorScreen        from '../screens/admin/AddDoorScreen';
-import LogsScreen           from '../screens/admin/LogsScreen';
+import AddUserScreen         from '../screens/admin/AddUserScreen';
+import DoorsScreen           from '../screens/admin/DoorsScreen';
+import AddDoorScreen         from '../screens/admin/AddDoorScreen';
+import LogsScreen            from '../screens/admin/LogsScreen';
 import FaceEnrollmentScreen from '../screens/admin/FaceEnrollmentScreen';
-import ProfileScreen        from '../screens/employee/ProfileScreen';
+import ProfileScreen         from '../screens/employee/ProfileScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// 1. Users Stack (Internal to Admin)
 const UsersStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="UsersList"      component={UsersScreen} />
-    <Stack.Screen name="AddUser"        component={AddUserScreen} />
+    <Stack.Screen name="AddUser"         component={AddUserScreen} />
     <Stack.Screen name="FaceEnrollment" component={FaceEnrollmentScreen} />
   </Stack.Navigator>
 );
 
+// 2. Doors Stack (Internal to Admin)
 const DoorsStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="DoorsList" component={DoorsScreen} />
@@ -31,6 +34,7 @@ const DoorsStack = () => (
   </Stack.Navigator>
 );
 
+// 3. Main Admin Tab Navigator
 const AdminTabs = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({

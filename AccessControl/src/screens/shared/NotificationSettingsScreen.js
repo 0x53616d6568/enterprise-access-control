@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Switch,
+  StyleSheet, Switch, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import colors from '../../constants/colors';
 
 const SETTINGS = [
@@ -44,8 +45,21 @@ export default function NotificationSettingsScreen({ navigation }) {
   const initialState = {};
   SETTINGS.forEach(s => s.items.forEach(i => { initialState[i.key] = i.default; }));
   const [settings, setSettings] = useState(initialState);
+  const [saving,   setSaving]   = useState(false);
 
   const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await SecureStore.setItemAsync('notif_settings', JSON.stringify(settings));
+      Alert.alert('Saved', 'Your notification preferences have been saved.');
+    } catch (err) {
+      Alert.alert('Error', 'Could not save preferences. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -84,8 +98,11 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         ))}
 
-        <TouchableOpacity style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Save preferences</Text>
+        <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+          {saving
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.saveBtnText}>Save preferences</Text>
+          }
         </TouchableOpacity>
 
       </ScrollView>

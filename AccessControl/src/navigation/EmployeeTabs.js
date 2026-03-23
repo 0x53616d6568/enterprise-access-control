@@ -8,11 +8,14 @@ import DashboardScreen     from '../screens/employee/DashboardScreen';
 import AttendanceScreen    from '../screens/employee/AttendanceScreen';
 import RequestsScreen      from '../screens/employee/RequestsScreen';
 import ProfileScreen       from '../screens/employee/ProfileScreen';
+
+// Shared Screens
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import AllLogsScreen       from '../screens/shared/AllLogsScreen';
 import BLETokenScreen      from '../screens/shared/BLETokenScreen';
 import AppearanceScreen    from '../screens/shared/AppearanceScreen';
-import NotifSettingsScreen from '../screens/shared/NotifSettingsScreen';
+import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
+
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -30,7 +33,7 @@ const ProfileStack = () => (
     <Stack.Screen name="ProfileMain"   component={ProfileScreen} />
     <Stack.Screen name="BLEToken"      component={BLETokenScreen} />
     <Stack.Screen name="Appearance"    component={AppearanceScreen} />
-    <Stack.Screen name="NotifSettings" component={NotifSettingsScreen} />
+    <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
   </Stack.Navigator>
 );
 
