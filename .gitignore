@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.expo/
+
+# Environment variables - NEVER commit these
+backend/.env
+
+# Build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
