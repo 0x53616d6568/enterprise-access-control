@@ -47,6 +47,11 @@ export const API = {
   ALL_LOGS:        `${BASE_URL}/logs`,
   MY_LOGS:         `${BASE_URL}/logs/me`,
   DOOR_LOGS:       (id) => `${BASE_URL}/logs/door/${id}`,
+
+  // Preferences
+  PREFERENCES:     `${BASE_URL}/preferences`,
+  THEME_PREFS:     `${BASE_URL}/preferences/theme`,
+  NOTIF_PREFS:     `${BASE_URL}/preferences/notifications`,
 };
 
 export default API;

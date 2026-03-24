@@ -12,6 +12,7 @@ const visitorRoutes      = require('./routes/visitor.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const logsRoutes         = require('./routes/logs.routes');
 const piRoutes           = require('./routes/pi.routes');
+const preferencesRoutes  = require('./routes/preferences.routes');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/visitors',      visitorRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/logs',          logsRoutes);
 app.use('/api/pi',            piRoutes);
+app.use('/api/preferences',   preferencesRoutes);
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (req, res) => {

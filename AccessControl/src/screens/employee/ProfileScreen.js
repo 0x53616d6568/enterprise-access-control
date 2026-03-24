@@ -48,7 +48,7 @@ export default function ProfileScreen({ navigation }) {
           color: colors.warning, 
           bg: colors.warningBg, 
           border: colors.warningBorder, 
-          onPress: () => navigation.navigate('ChangePassword') 
+          onPress: () => navigation.navigate('ChangeCurrentPassword') 
         },
       ]
     },
@@ -170,7 +170,10 @@ export default function ProfileScreen({ navigation }) {
 
         <Text style={styles.sectionLabel}>Support</Text>
         <View style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuRow}>
+          <TouchableOpacity 
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('HelpCenter')}
+          >
             <View style={styles.menuLeft}>
               <View style={[styles.menuIcon, { backgroundColor: colors.bg, borderColor: colors.border }]}>
                 <Ionicons name="help-circle-outline" size={14} color={colors.textSecondary} />

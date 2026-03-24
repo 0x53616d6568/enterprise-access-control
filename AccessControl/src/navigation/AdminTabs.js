@@ -10,6 +10,8 @@ import UsersScreen          from '../screens/admin/UsersScreen';
 import AddUserScreen         from '../screens/admin/AddUserScreen';
 import DoorsScreen           from '../screens/admin/DoorsScreen';
 import AddDoorScreen         from '../screens/admin/AddDoorScreen';
+import EditDoorScreen        from '../screens/admin/EditDoorScreen';
+import DoorAccessRulesScreen from '../screens/admin/DoorAccessRulesScreen';
 import LogsScreen            from '../screens/admin/LogsScreen';
 import FaceEnrollmentScreen from '../screens/admin/FaceEnrollmentScreen';
 import ProfileScreen         from '../screens/employee/ProfileScreen';
@@ -29,8 +31,10 @@ const UsersStack = () => (
 // 2. Doors Stack (Internal to Admin)
 const DoorsStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="DoorsList" component={DoorsScreen} />
-    <Stack.Screen name="AddDoor"   component={AddDoorScreen} />
+    <Stack.Screen name="DoorsList"  component={DoorsScreen} />
+    <Stack.Screen name="AddDoor"    component={AddDoorScreen} />
+    <Stack.Screen name="EditDoor"   component={EditDoorScreen} />
+    <Stack.Screen name="DoorRules"  component={DoorAccessRulesScreen} />
   </Stack.Navigator>
 );
 

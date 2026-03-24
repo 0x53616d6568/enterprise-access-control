@@ -9,6 +9,7 @@ import {
   getRefreshToken,
   getStoredUser,
 } from '../services/authService';
+import { getThemePreferences } from '../services/preferencesService';
 
 const AuthContext = createContext(null);
 
@@ -17,6 +18,8 @@ export const AuthProvider = ({ children }) => {
   const [accessToken,  setAccessToken]  = useState(null);
   const [isLoading,    setIsLoading]    = useState(true);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [theme,        setTheme]        = useState('dark');
+  const [accentColor,  setAccentColor]  = useState('blue');
 
   // Restore session on app start
   useEffect(() => {
@@ -29,6 +32,15 @@ export const AuthProvider = ({ children }) => {
         if (token && storedUser) {
           setAccessToken(token);
           setUser(storedUser);
+          
+          // Load theme preferences
+          try {
+            const themePrefs = await getThemePreferences(token);
+            setTheme(themePrefs.theme || 'dark');
+            setAccentColor(themePrefs.accentColor || 'blue');
+          } catch (err) {
+            console.log('Failed to load theme preferences:', err.message);
+          }
         }
       } catch (err) {
         console.log('Session restore failed:', err.message);
@@ -72,6 +84,14 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
   };
 
+  const updateTheme = (newTheme) => {
+    setTheme(newTheme);
+  };
+
+  const updateAccentColor = (newColor) => {
+    setAccentColor(newColor);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -79,6 +99,10 @@ export const AuthProvider = ({ children }) => {
       isLoading,
       isFirstLogin,
       setIsFirstLogin,
+      theme,
+      accentColor,
+      updateTheme,
+      updateAccentColor,
       login,
       logout,
       updateUser,

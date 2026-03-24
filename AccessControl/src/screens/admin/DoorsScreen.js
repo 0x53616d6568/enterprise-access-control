@@ -36,8 +36,26 @@ export default function DoorsScreen({ navigation }) {
     }
   }, [accessToken]);
 
-  useEffect(() => { fetchDoors(); }, [fetchDoors]);
   const onRefresh = () => { setRefreshing(true); fetchDoors(); };
+
+  const handleDelete = (doorId, doorName) => {
+    Alert.alert('Delete door', `Remove "${doorName}"? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await axios.delete(`${API.DOORS}/${doorId}`, { headers });
+            setDoors(doors.filter(d => d.door_id !== doorId));
+            Alert.alert('Success', 'Door deleted');
+          } catch (err) {
+            Alert.alert('Error', err?.response?.data?.message || 'Failed to delete door');
+          }
+        },
+      },
+    ]);
+  };
 
   if (loading) return (
     <View style={styles.centered}><ActivityIndicator size="large" color={colors.accent} /></View>

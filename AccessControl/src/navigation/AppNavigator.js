@@ -5,7 +5,9 @@ import colors from '../constants/colors';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
-
+import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
+import ChangeCurrentPasswordScreen from '../screens/auth/ChangeCurrentPasswordScreen';
+  
 // Tab Navigators (Role-based)
 import AdminTabs from './AdminTabs';
 import EmployeeTabs from './EmployeeTabs';
@@ -16,6 +18,7 @@ import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
 import AppearanceScreen from '../screens/shared/AppearanceScreen';
 import BLETokenScreen from '../screens/shared/BLETokenScreen';
+import HelpCenterScreen from '../screens/shared/HelpCenterScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,9 +41,10 @@ export default function AppNavigator() {
       }}
     >
       {!user ? (
-        // 1. Auth Stack: Only accessible when logged out
+        // 1. Auth Stack
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : (
+        
         <>
           {/* 2. Main Role-based Entry Point */}
           {user.access_level >= 5 ? (
@@ -50,9 +54,18 @@ export default function AppNavigator() {
           ) : (
             <Stack.Screen name="MainTabs" component={EmployeeTabs} />
           )}
+          
+          {/* change password screen from settings menu in profile screen */}
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: true, title: 'Change Password' }} />
+          
+          {/* change current password screen from settings menu in profile screen */}
+          <Stack.Screen name="ChangeCurrentPassword" component={ChangeCurrentPasswordScreen} options={{ headerShown: true, title: 'Change Password' }} />
+          
+          
 
+    
           {/* 3. Global Shared Screens */}
-          {/* These slide in over the bottom tabs when called from the Profile */}
+          {/* These use the exact names called in ProfileScreen's navigation.navigate() */}
           
           <Stack.Screen 
             name="Notifications" 
@@ -87,6 +100,15 @@ export default function AppNavigator() {
             options={{ 
               headerShown: true, 
               title: 'Security Token' 
+            }} 
+          />
+
+          <Stack.Screen 
+            name="HelpCenter" 
+            component={HelpCenterScreen} 
+            options={{ 
+              headerShown: false,
+              title: 'Help Center' 
             }} 
           />
         </>
