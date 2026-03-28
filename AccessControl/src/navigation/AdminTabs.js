@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../constants/colors';
+import useThemeColors from '../hooks/useThemeColors';
 
 // Screen Imports
 import DashboardScreen      from '../screens/employee/DashboardScreen';
@@ -39,39 +39,43 @@ const DoorsStack = () => (
 );
 
 // 3. Main Admin Tab Navigator
-const AdminTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: {
-        backgroundColor: colors.bgCard,
-        borderTopColor:  colors.border,
-        borderTopWidth:  1,
-        paddingBottom:   8,
-        paddingTop:      8,
-        height:          60,
-      },
-      tabBarActiveTintColor:   colors.accent,
-      tabBarInactiveTintColor: '#484F58',
-      tabBarLabelStyle: { fontSize: 9, marginTop: 2 },
-      tabBarIcon: ({ color }) => {
-        const icons = {
-          Home:    'home-outline',
-          Users:   'people-outline',
-          Doors:   'lock-closed-outline',
-          Logs:    'document-text-outline',
-          Profile: 'person-outline',
-        };
-        return <Ionicons name={icons[route.name]} size={20} color={color} />;
-      },
-    })}
-  >
-    <Tab.Screen name="Home"    component={DashboardScreen} />
-    <Tab.Screen name="Users"   component={UsersStack} />
-    <Tab.Screen name="Doors"   component={DoorsStack} />
-    <Tab.Screen name="Logs"    component={LogsScreen} />
-    <Tab.Screen name="Profile" component={ProfileScreen} />
-  </Tab.Navigator>
-);
+const AdminTabs = () => {
+  const colors = useThemeColors();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.bgCard,
+          borderTopColor:  colors.border,
+          borderTopWidth:  1,
+          paddingBottom:   8,
+          paddingTop:      8,
+          height:          60,
+        },
+        tabBarActiveTintColor:   colors.accent,
+        tabBarInactiveTintColor: '#484F58',
+        tabBarLabelStyle: { fontSize: 9, marginTop: 2 },
+        tabBarIcon: ({ color }) => {
+          const icons = {
+            Home:    'home-outline',
+            Users:   'people-outline',
+            Doors:   'lock-closed-outline',
+            Logs:    'document-text-outline',
+            Profile: 'person-outline',
+          };
+          return <Ionicons name={icons[route.name]} size={20} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Home"    component={DashboardScreen} />
+      <Tab.Screen name="Users"   component={UsersStack} />
+      <Tab.Screen name="Doors"   component={DoorsStack} />
+      <Tab.Screen name="Logs"    component={LogsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+};
 
 export default AdminTabs;

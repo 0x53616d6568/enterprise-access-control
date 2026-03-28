@@ -6,22 +6,62 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
-
-const REQUEST_TYPES = [
-  { key: 'ACCESS_REQUEST',  label: 'Access Request',   icon: 'lock-closed-outline',   color: colors.accent,   bg: colors.bgDeep,      border: colors.accentDark },
-  { key: 'LEAVE',           label: 'Leave Request',    icon: 'calendar-outline',      color: colors.success,  bg: colors.successBg,   border: colors.successBorder },
-  { key: 'VISITOR_INVITE',  label: 'Visitor Invite',   icon: 'people-outline',        color: colors.warning,  bg: colors.warningBg,   border: colors.warningBorder },
-  { key: 'SCHEDULE_CHANGE', label: 'Schedule Change',  icon: 'time-outline',          color: colors.managerColor, bg: colors.managerBg, border: colors.managerBorder },
-];
+import useThemeColors from '../../hooks/useThemeColors';
 
 const FILTERS = ['All', 'Pending', 'Approved', 'Rejected'];
 
 export default function RequestsScreen() {
-  const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:     { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+    title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle: { color: colors.textMuted, fontSize: 13 },
+    newBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+    newBtnText: { color: '#fff', fontSize: 12, fontWeight: '500' },
+    filterRow: { marginBottom: 20 },
+    filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
+    filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    filterText: { color: colors.textSecondary, fontSize: 12 },
+    filterTextActive: { color: '#fff' },
+    emptyCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 24, alignItems: 'center', gap: 8 },
+    emptyText: { color: colors.textMuted, fontSize: 13 },
+    reqCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 12 },
+    reqTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+    reqLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    reqIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    reqTypeName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
+    reqDate:  { color: colors.textMuted, fontSize: 11 },
+    statusPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
+    statusText: { fontSize: 11, fontWeight: '500' },
+    reqDesc:  { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginBottom: 10 },
+    reqFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+    reqFooterLeft:  { color: colors.textMuted, fontSize: 11 },
+    reqFooterRight: { color: colors.textMuted, fontSize: 11 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+    modalCard: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '500' },
+    modalLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 10 },
+    typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+    typeOpt: { width: '47%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12 },
+    typeOptText: { color: colors.textMuted, fontSize: 12, flex: 1 },
+    modalInput: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, color: colors.textPrimary, fontSize: 13, minHeight: 100, textAlignVertical: 'top', marginBottom: 20 },
+    submitBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+    submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '500' },
+  });
+
+  const REQUEST_TYPES = [
+    { key: 'ACCESS_REQUEST',  label: 'Access Request',   icon: 'lock-closed-outline',   color: colors.accent,   bg: colors.bgDeep,      border: colors.accentDark },
+    { key: 'LEAVE',           label: 'Leave Request',    icon: 'calendar-outline',      color: colors.success,  bg: colors.successBg,   border: colors.successBorder },
+    { key: 'VISITOR_INVITE',  label: 'Visitor Invite',   icon: 'people-outline',        color: colors.warning,  bg: colors.warningBg,   border: colors.warningBorder },
+    { key: 'SCHEDULE_CHANGE', label: 'Schedule Change',  icon: 'time-outline',          color: colors.managerColor, bg: colors.managerBg, border: colors.managerBorder },
+  ];
   const [requests,   setRequests]   = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,11 +71,9 @@ export default function RequestsScreen() {
   const [newDesc,    setNewDesc]    = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchRequests = useCallback(async () => {
     try {
-      const res = await axios.get(API.MY_REQUESTS, { headers });
+      const res = await api.get(API.MY_REQUESTS);
       setRequests(res.data.data || []);
     } catch (err) {
       console.log('Requests fetch error:', err.message);
@@ -43,7 +81,7 @@ export default function RequestsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
@@ -56,7 +94,7 @@ export default function RequestsScreen() {
     }
     setSubmitting(true);
     try {
-      await axios.post(API.MY_REQUESTS.replace('/me', ''), { type: newType, description: newDesc }, { headers });
+      await api.post(API.MY_REQUESTS.replace('/me', ''), { type: newType, description: newDesc });
       setModalVisible(false);
       setNewDesc('');
       fetchRequests();
@@ -222,44 +260,3 @@ export default function RequestsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle: { color: colors.textMuted, fontSize: 13 },
-  newBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  newBtnText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  filterRow: { marginBottom: 20 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
-  filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  filterText: { color: colors.textSecondary, fontSize: 12 },
-  filterTextActive: { color: '#fff' },
-  emptyCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 24, alignItems: 'center', gap: 8 },
-  emptyText: { color: colors.textMuted, fontSize: 13 },
-  reqCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 12 },
-  reqTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  reqLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  reqIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  reqTypeName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
-  reqDate:  { color: colors.textMuted, fontSize: 11 },
-  statusPill: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 6, borderWidth: 1 },
-  statusText: { fontSize: 11, fontWeight: '500' },
-  reqDesc:  { color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginBottom: 10 },
-  reqFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  reqFooterLeft:  { color: colors.textMuted, fontSize: 11 },
-  reqFooterRight: { color: colors.textMuted, fontSize: 11 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: colors.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '500' },
-  modalLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 10 },
-  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  typeOpt: { width: '47%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12 },
-  typeOptText: { color: colors.textMuted, fontSize: 12, flex: 1 },
-  modalInput: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, color: colors.textPrimary, fontSize: 13, minHeight: 100, textAlignVertical: 'top', marginBottom: 20 },
-  submitBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '500' },
-});

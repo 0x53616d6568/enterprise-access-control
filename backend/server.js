@@ -13,6 +13,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const logsRoutes         = require('./routes/logs.routes');
 const piRoutes           = require('./routes/pi.routes');
 const preferencesRoutes  = require('./routes/preferences.routes');
+const adminRoutes        = require('./routes/admin.routes');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/logs',          logsRoutes);
 app.use('/api/pi',            piRoutes);
 app.use('/api/preferences',   preferencesRoutes);
+app.use('/api/admin',         adminRoutes);  // Admin endpoints for token management
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (req, res) => {

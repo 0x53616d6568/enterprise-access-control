@@ -6,22 +6,58 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
-
-const SECURITY_LEVELS = [
-  { level: 1, label: 'Level 1 — Standard',   sub: 'BLE only',            color: colors.success,  bg: colors.successBg,  border: colors.successBorder },
-  { level: 3, label: 'Level 3 — Elevated',   sub: 'BLE + manager rule',  color: colors.warning,  bg: colors.warningBg,  border: colors.warningBorder },
-  { level: 5, label: 'Level 5 — High Security', sub: 'BLE + Face auth',  color: colors.danger,   bg: colors.dangerBg,   border: colors.dangerBorder },
-];
+import { useAuth } from '../../context/AuthContext';
+import useThemeColors from '../../hooks/useThemeColors';
 
 const FALLBACK_METHODS = ['NONE', 'PIN', 'ADMIN_OVERRIDE'];
 
 export default function EditDoorScreen({ navigation, route }) {
-  const { accessToken } = useAuth();
   const { doorId } = route.params;
+  const { accessToken } = useAuth();
+  const colors = useThemeColors();
+  
+  const styles = StyleSheet.create({
+    safe:        { flex: 1, backgroundColor: colors.bg },
+    container:   { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
+    header:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
+    backBtn:     { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    title:       { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
+    subtitle:    { color: colors.textMuted, fontSize: 12 },
+    field:       { marginBottom: 18 },
+    label:       { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
+    input:       { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: colors.textPrimary, fontSize: 13 },
+    levelGrid:   { gap: 8 },
+    levelOpt:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
+    levelBadge:  { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    levelBadgeText: { fontSize: 12, fontWeight: '600' },
+    levelLabel:  { color: colors.textSecondary, fontSize: 13, fontWeight: '500', flex: 1 },
+    levelSub:    { color: colors.textMuted, fontSize: 11 },
+    toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
+    toggleLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+    toggleIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    toggleLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
+    toggleSub:   { color: colors.textMuted, fontSize: 11 },
+    checkbox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    checkboxActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    selectBtn:   { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    selectText:  { color: colors.textPrimary, fontSize: 13 },
+    picker:      { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: 4, overflow: 'hidden' },
+    pickerOpt:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+    pickerOptActive: { backgroundColor: colors.bgDeep },
+    pickerOptText: { color: colors.textPrimary, fontSize: 13 },
+    infoBox:     { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 10, padding: 14, marginBottom: 20 },
+    infoText:    { color: colors.accentText, fontSize: 12, lineHeight: 18, flex: 1 },
+    submitBtn:   { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+    submitText:  { color: '#fff', fontSize: 15, fontWeight: '500' },
+  });
+
+  const SECURITY_LEVELS = [
+    { level: 1, label: 'Level 1 — Standard',   sub: 'BLE only',            color: colors.success,  bg: colors.successBg,  border: colors.successBorder },
+    { level: 3, label: 'Level 3 — Elevated',   sub: 'BLE + manager rule',  color: colors.warning,  bg: colors.warningBg,  border: colors.warningBorder },
+    { level: 5, label: 'Level 5 — High Security', sub: 'BLE + Face auth',  color: colors.danger,   bg: colors.dangerBg,   border: colors.dangerBorder },
+  ];
   
   const [doorName,      setDoorName]      = useState('');
   const [location,      setLocation]      = useState('');
@@ -33,13 +69,11 @@ export default function EditDoorScreen({ navigation, route }) {
   const [saving,        setSaving]        = useState(false);
   const [showFallback,  setShowFallback]  = useState(false);
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   // Load door data on mount
   useEffect(() => {
     const loadDoor = async () => {
       try {
-        const res = await axios.get(`${API.DOORS}/${doorId}`, { headers });
+        const res = await api.get(`${API.DOORS}/${doorId}`);
         const door = res.data.data;
         setDoorName(door.door_name || '');
         setLocation(door.location || '');
@@ -70,14 +104,14 @@ export default function EditDoorScreen({ navigation, route }) {
     }
     setSaving(true);
     try {
-      await axios.put(`${API.DOORS}/${doorId}`, {
+      await api.put(`${API.DOORS}/${doorId}`, {
         door_name:          doorName.trim(),
         location:           location.trim(),
         pi_device_id:       piDeviceId.trim() || null,
         security_level:     securityLevel,
         requires_face_auth: requiresFace ? 1 : 0,
         fallback_method:    fallback,
-      }, { headers });
+      });
       Alert.alert('Success', 'Door updated successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -254,38 +288,3 @@ export default function EditDoorScreen({ navigation, route }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:        { flex: 1, backgroundColor: colors.bg },
-  container:   { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
-  header:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
-  backBtn:     { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  title:       { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
-  subtitle:    { color: colors.textMuted, fontSize: 12 },
-  field:       { marginBottom: 18 },
-  label:       { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
-  input:       { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: colors.textPrimary, fontSize: 13 },
-  levelGrid:   { gap: 8 },
-  levelOpt:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
-  levelBadge:  { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  levelBadgeText: { fontSize: 12, fontWeight: '600' },
-  levelLabel:  { color: colors.textSecondary, fontSize: 13, fontWeight: '500', flex: 1 },
-  levelSub:    { color: colors.textMuted, fontSize: 11 },
-  toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
-  toggleLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  toggleIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  toggleLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
-  toggleSub:   { color: colors.textMuted, fontSize: 11 },
-  checkbox:    { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  checkboxActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  selectBtn:   { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  selectText:  { color: colors.textPrimary, fontSize: 13 },
-  picker:      { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: 4, overflow: 'hidden' },
-  pickerOpt:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  pickerOptActive: { backgroundColor: colors.bgDeep },
-  pickerOptText: { color: colors.textPrimary, fontSize: 13 },
-  infoBox:     { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 10, padding: 14, marginBottom: 20 },
-  infoText:    { color: colors.accentText, fontSize: 12, lineHeight: 18, flex: 1 },
-  submitBtn:   { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-  submitText:  { color: '#fff', fontSize: 15, fontWeight: '500' },
-});

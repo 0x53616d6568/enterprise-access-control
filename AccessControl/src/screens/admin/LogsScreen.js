@@ -5,31 +5,63 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
+import { useAuth } from '../../context/AuthContext';
+import useThemeColors from '../../hooks/useThemeColors';
 
 const FILTERS = ['All', 'Granted', 'Denied', 'Face auth'];
-const AVATAR_COLORS = [
-  { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
-  { bg: colors.successBg, border: colors.successBorder, text: colors.success },
-  { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
-];
 
 export default function LogsScreen() {
   const { accessToken } = useAuth();
+  const colors = useThemeColors();
+  
+  const styles = StyleSheet.create({
+    safe:      { flex: 1, backgroundColor: colors.bg },
+    centered:  { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:    { marginBottom: 16 },
+    title:     { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle:  { color: colors.textMuted, fontSize: 13 },
+    searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 12 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    filterRow: { marginBottom: 16 },
+    filterPill: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
+    filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    filterText: { color: colors.textSecondary, fontSize: 12 },
+    filterTextActive: { color: '#fff' },
+    emptyCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 24, alignItems: 'center', gap: 8 },
+    emptyText: { color: colors.textMuted, fontSize: 13 },
+    dateDivider: { paddingVertical: 6, marginBottom: 4 },
+    dateDividerText: { color: '#484F58', fontSize: 11, letterSpacing: 0.3 },
+    logItem:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
+    avatar:    { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexShrink: 0 },
+    avatarText: { fontSize: 11, fontWeight: '500' },
+    logInfo:   { flex: 1, minWidth: 0 },
+    logName:   { color: colors.textPrimary, fontSize: 12, fontWeight: '500', marginBottom: 2 },
+    logDetail: { color: colors.textMuted, fontSize: 11 },
+    logRight:  { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+    logTime:   { color: colors.textMuted, fontSize: 11 },
+    logBadge:  { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1 },
+    badgeGranted: { backgroundColor: colors.successBg, borderColor: colors.successBorder },
+    badgeDenied:  { backgroundColor: colors.dangerBg,  borderColor: colors.dangerBorder },
+    logBadgeText: { fontSize: 10, fontWeight: '500' },
+  });
+
+  const AVATAR_COLORS = [
+    { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
+    { bg: colors.successBg, border: colors.successBorder, text: colors.success },
+    { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
+  ];
   const [logs,      setLogs]      = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [refreshing,setRefreshing]= useState(false);
   const [filter,    setFilter]    = useState('All');
   const [search,    setSearch]    = useState('');
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchLogs = useCallback(async () => {
     try {
-      const res = await axios.get(API.ALL_LOGS, { headers });
+      const res = await api.get(API.ALL_LOGS);
       setLogs(res.data.data || []);
     } catch (err) {
       console.log('Logs fetch error:', err.message);
@@ -37,7 +69,7 @@ export default function LogsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
   const onRefresh = () => { setRefreshing(true); fetchLogs(); };
@@ -162,35 +194,3 @@ export default function LogsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: colors.bg },
-  centered:  { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:    { marginBottom: 16 },
-  title:     { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle:  { color: colors.textMuted, fontSize: 13 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 12 },
-  searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
-  filterRow: { marginBottom: 16 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
-  filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  filterText: { color: colors.textSecondary, fontSize: 12 },
-  filterTextActive: { color: '#fff' },
-  emptyCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 24, alignItems: 'center', gap: 8 },
-  emptyText: { color: colors.textMuted, fontSize: 13 },
-  dateDivider: { paddingVertical: 6, marginBottom: 4 },
-  dateDividerText: { color: '#484F58', fontSize: 11, letterSpacing: 0.3 },
-  logItem:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
-  avatar:    { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexShrink: 0 },
-  avatarText: { fontSize: 11, fontWeight: '500' },
-  logInfo:   { flex: 1, minWidth: 0 },
-  logName:   { color: colors.textPrimary, fontSize: 12, fontWeight: '500', marginBottom: 2 },
-  logDetail: { color: colors.textMuted, fontSize: 11 },
-  logRight:  { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
-  logTime:   { color: colors.textMuted, fontSize: 11 },
-  logBadge:  { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1 },
-  badgeGranted: { backgroundColor: colors.successBg, borderColor: colors.successBorder },
-  badgeDenied:  { backgroundColor: colors.dangerBg,  borderColor: colors.dangerBorder },
-  logBadgeText: { fontSize: 10, fontWeight: '500' },
-});

@@ -5,33 +5,59 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
-
-const AVATAR_COLORS = [
-  { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
-  { bg: colors.successBg, border: colors.successBorder, text: colors.success },
-  { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
-  { bg: colors.managerBg, border: colors.managerBorder, text: colors.managerColor },
-];
+import useThemeColors from '../../hooks/useThemeColors';
 
 export default function TeamScreen() {
   const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:     { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:   { marginBottom: 16 },
+    title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle: { color: colors.textMuted, fontSize: 13 },
+    searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 16 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+    statCard: { flex: 1, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 12 },
+    statLabel: { color: colors.textMuted, fontSize: 11, marginBottom: 5 },
+    statValue: { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3 },
+    statSub:  { fontSize: 11, marginTop: 2 },
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 },
+    memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
+    avatar:    { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    avatarText: { fontSize: 13, fontWeight: '500' },
+    memberInfo: { flex: 1 },
+    memberName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
+    memberMeta: { color: colors.textMuted, fontSize: 11 },
+    memberRight: { alignItems: 'flex-end', gap: 4 },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+    statusText: { fontSize: 11, fontWeight: '500' },
+    memberTime: { color: colors.textMuted, fontSize: 11 },
+  });
+
+  const AVATAR_COLORS = [
+    { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
+    { bg: colors.successBg, border: colors.successBorder, text: colors.success },
+    { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
+    { bg: colors.managerBg, border: colors.managerBorder, text: colors.managerColor },
+  ];
   const [users,      setUsers]      = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search,     setSearch]     = useState('');
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchData = useCallback(async () => {
     try {
       const [usersRes, attRes] = await Promise.all([
-        axios.get(API.USERS,          { headers }),
-        axios.get(API.ALL_ATTENDANCE, { headers }),
+        api.get(API.USERS),
+        api.get(API.ALL_ATTENDANCE),
       ]);
       setUsers(usersRes.data.data     || []);
       setAttendance(attRes.data.data  || []);
@@ -41,7 +67,7 @@ export default function TeamScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -159,30 +185,3 @@ export default function TeamScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:   { marginBottom: 16 },
-  title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle: { color: colors.textMuted, fontSize: 13 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 16 },
-  searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  statCard: { flex: 1, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 12 },
-  statLabel: { color: colors.textMuted, fontSize: 11, marginBottom: 5 },
-  statValue: { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3 },
-  statSub:  { fontSize: 11, marginTop: 2 },
-  sectionTitle: { color: colors.textSecondary, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 },
-  memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
-  avatar:    { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  avatarText: { fontSize: 13, fontWeight: '500' },
-  memberInfo: { flex: 1 },
-  memberName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
-  memberMeta: { color: colors.textMuted, fontSize: 11 },
-  memberRight: { alignItems: 'flex-end', gap: 4 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
-  statusText: { fontSize: 11, fontWeight: '500' },
-  memberTime: { color: colors.textMuted, fontSize: 11 },
-});

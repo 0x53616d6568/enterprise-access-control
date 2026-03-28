@@ -3,6 +3,14 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { success, error } = require('../utils/response');
+const {
+  createBleToken,
+  getUserBleTokens,
+  rotateBleToken: rotateBleTokenService,
+  revokeBleToken,
+  revokeAllUserTokens,
+  checkTokensForRotation,
+} = require('../utils/bleTokenService');
 
 // POST /api/auth/login
 const login = async (req, res, next) => {
@@ -186,4 +194,161 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { login, refresh, logout, getMe, changePassword };
+// GET /api/auth/ble-token
+// Retrieve or create BLE token for user
+const getBleToken = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const deviceName = req.query.deviceName || 'Default Device';
+
+    // Get existing active tokens
+    const tokens = await getUserBleTokens(userId);
+
+    // If user has an active token, return the first one
+    // Otherwise create a new one
+    if (tokens.length > 0) {
+      const token = tokens[0];
+      return success(res, {
+        token_id: token.id,
+        device_name: token.device_name,
+        created_at: token.created_at,
+        expires_at: token.expires_at,
+        last_used_at: token.last_used_at,
+        message: 'Use this token to authenticate with BLE devices',
+      }, 'BLE token retrieved');
+    }
+
+    // Create new token
+    const newToken = await createBleToken(userId, deviceName);
+
+    return success(res, {
+      token_id: newToken.id,
+      display_token: newToken.displayToken,
+      device_name: newToken.deviceName,
+      created_at: newToken.createdAt,
+      expires_at: newToken.expiresAt,
+      message: 'New BLE token created. Copy it now - you won\'t see it again.',
+    }, 'BLE token created successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/ble-tokens
+// List all active BLE tokens for the user
+const listBleTokens = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const rawTokens = await getUserBleTokens(userId);
+
+    // Keep snake_case to match frontend expectations
+    const tokens = rawTokens.map(token => ({
+      token_id: token.id,
+      device_name: token.device_name,
+      created_at: token.created_at,
+      expires_at: token.expires_at,
+      last_used_at: token.last_used_at,
+    }));
+
+    return success(res, {
+      tokens,
+      count: tokens.length,
+    }, 'Tokens retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/ble-token/rotate
+// Rotate (invalidate and replace) a specific BLE token
+const rotateBleToken = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const { tokenId } = req.body;
+
+    if (!tokenId) {
+      return error(res, 'Token ID is required', 400);
+    }
+
+    const rotatedToken = await rotateBleTokenService(userId, tokenId);
+
+    return success(res, {
+      token_id: rotatedToken.id,
+      display_token: rotatedToken.displayToken,
+      device_name: rotatedToken.deviceName,
+      created_at: rotatedToken.createdAt,
+      expires_at: rotatedToken.expiresAt,
+      message: 'Token rotated successfully. Copy new token now - you won\'t see it again.',
+    }, 'BLE token rotated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/ble-token/revoke
+// Manually revoke a BLE token
+const revokeBleTokenEndpoint = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const { tokenId, reason = 'USER_REQUESTED' } = req.body;
+
+    if (!tokenId) {
+      return error(res, 'Token ID is required', 400);
+    }
+
+    await revokeBleToken(userId, tokenId, reason);
+
+    return success(res, {}, 'Token revoked successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/ble-tokens/revoke-all
+// Emergency: revoke all BLE tokens for the user
+const revokeAllBleTokens = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const revokedCount = await revokeAllUserTokens(userId);
+
+    return success(res, {
+      count: revokedCount,
+      message: 'All BLE tokens have been revoked. You will need to generate new tokens to access BLE devices.',
+    }, 'All tokens revoked successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/auth/ble-token/rotation-check
+// Check which tokens need rotation (90+ days old)
+const checkBleTokenRotation = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const tokensNeedingRotation = await checkTokensForRotation(userId);
+
+    return success(res, {
+      tokensNeedingRotation,
+      count: tokensNeedingRotation.length,
+      message: tokensNeedingRotation.length > 0 
+        ? 'You have tokens that should be rotated for security.'
+        : 'All your tokens are healthy.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  login,
+  refresh,
+  logout,
+  getMe,
+  changePassword,
+  getBleToken,
+  listBleTokens,
+  rotateBleToken,
+  revokeBleTokenEndpoint,
+  revokeAllBleTokens,
+  checkBleTokenRotation,
+};

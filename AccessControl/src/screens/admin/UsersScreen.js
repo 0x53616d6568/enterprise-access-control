@@ -5,33 +5,58 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
-
-const AVATAR_COLORS = [
-  { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
-  { bg: colors.successBg, border: colors.successBorder, text: colors.success },
-  { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
-  { bg: colors.managerBg, border: colors.managerBorder, text: colors.managerColor },
-];
+import useThemeColors from '../../hooks/useThemeColors';
 
 const FILTERS = ['All', 'Admin', 'Manager', 'Employee'];
 
 export default function UsersScreen({ navigation }) {
-  const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:     { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+    title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle: { color: colors.textMuted, fontSize: 13 },
+    addBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+    addBtnText: { color: '#fff', fontSize: 12, fontWeight: '500' },
+    searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 14 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
+    filterRow: { marginBottom: 16 },
+    filterPill: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
+    filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    filterText: { color: colors.textSecondary, fontSize: 12 },
+    filterTextActive: { color: '#fff' },
+    userItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
+    avatar:   { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    avatarText: { fontSize: 13, fontWeight: '500' },
+    userInfo: { flex: 1 },
+    userName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
+    userMeta: { color: colors.textMuted, fontSize: 11 },
+    userRight: { alignItems: 'flex-end', gap: 4 },
+    rolePill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1 },
+    roleText: { fontSize: 10, fontWeight: '500' },
+    statusText: { fontSize: 10 },
+  });
+
+  const AVATAR_COLORS = [
+    { bg: colors.bgDeep,    border: colors.accentDark,    text: colors.accentText },
+    { bg: colors.successBg, border: colors.successBorder, text: colors.success },
+    { bg: colors.warningBg, border: colors.warningBorder, text: colors.warning },
+    { bg: colors.managerBg, border: colors.managerBorder, text: colors.managerColor },
+  ];
   const [users,     setUsers]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [refreshing,setRefreshing]= useState(false);
   const [search,    setSearch]    = useState('');
   const [filter,    setFilter]    = useState('All');
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await axios.get(API.USERS, { headers });
+      const res = await api.get(API.USERS);
       setUsers(res.data.data || []);
     } catch (err) {
       console.log('Users fetch error:', err.message);
@@ -39,7 +64,7 @@ export default function UsersScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
   const onRefresh = () => { setRefreshing(true); fetchUsers(); };
@@ -143,31 +168,3 @@ export default function UsersScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:     { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  title:    { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle: { color: colors.textMuted, fontSize: 13 },
-  addBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  addBtnText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 14 },
-  searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13 },
-  filterRow: { marginBottom: 16 },
-  filterPill: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: colors.borderMid, marginRight: 8 },
-  filterPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  filterText: { color: colors.textSecondary, fontSize: 12 },
-  filterTextActive: { color: '#fff' },
-  userItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
-  avatar:   { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  avatarText: { fontSize: 13, fontWeight: '500' },
-  userInfo: { flex: 1 },
-  userName: { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
-  userMeta: { color: colors.textMuted, fontSize: 11 },
-  userRight: { alignItems: 'flex-end', gap: 4 },
-  rolePill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1 },
-  roleText: { fontSize: 10, fontWeight: '500' },
-  statusText: { fontSize: 10 },
-});

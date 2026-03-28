@@ -6,10 +6,40 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
 export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const colors = useThemeColors();
+  
+  const styles = StyleSheet.create({
+    safe:      { flex: 1, backgroundColor: colors.bg },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    hero:      { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
+    avatarContainer: { position: 'relative' },
+    avatar:    { width: 68, height: 68, borderRadius: 22, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
+    avatarText: { color: colors.accentText, fontSize: 24, fontWeight: '600' },
+    editBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: colors.accent, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.bg },
+    heroInfo:  { flex: 1 },
+    name:      { color: colors.textPrimary, fontSize: 19, fontWeight: '600', letterSpacing: -0.4, marginBottom: 2 },
+    email:     { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
+    roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+    roleText:  { fontSize: 11, fontWeight: '500' },
+    sectionLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4 },
+    infoCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden', marginBottom: 24 },
+    infoRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+    infoLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    infoIcon:  { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    infoLabel: { color: colors.textSecondary, fontSize: 13 },
+    infoValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
+    menuCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden' },
+    menuRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+    menuLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    menuIcon:  { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    menuLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '400' },
+    version:   { textAlign: 'center', color: '#3D444D', fontSize: 11, marginTop: 32 },
+  });
+  
   const [loggingOut, setLoggingOut] = useState(false);
 
   // Generate initials for the avatar placeholder
@@ -204,31 +234,3 @@ export default function ProfileScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: colors.bg },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  hero:      { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
-  avatarContainer: { position: 'relative' },
-  avatar:    { width: 68, height: 68, borderRadius: 22, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.accentText, fontSize: 24, fontWeight: '600' },
-  editBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: colors.accent, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.bg },
-  heroInfo:  { flex: 1 },
-  name:      { color: colors.textPrimary, fontSize: 19, fontWeight: '600', letterSpacing: -0.4, marginBottom: 2 },
-  email:     { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
-  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  roleText:  { fontSize: 11, fontWeight: '500' },
-  sectionLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 10, marginLeft: 4 },
-  infoCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden', marginBottom: 24 },
-  infoRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  infoLeft:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  infoIcon:  { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  infoLabel: { color: colors.textSecondary, fontSize: 13 },
-  infoValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
-  menuCard:  { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden' },
-  menuRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  menuIcon:  { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  menuLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '400' },
-  version:   { textAlign: 'center', color: '#3D444D', fontSize: 11, marginTop: 32 },
-});

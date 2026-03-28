@@ -5,23 +5,53 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
 export default function BLETokenScreen({ navigation }) {
   const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:        { flex: 1, backgroundColor: colors.bg },
+    centered:    { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container:   { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
+    header:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+    backBtn:     { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    title:       { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
+    subtitle:    { color: colors.textMuted, fontSize: 12 },
+    tokenCard:   { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 24 },
+    tokenTop:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+    tokenIconWrap: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
+    tokenInfo:   { flex: 1 },
+    tokenLabel:  { color: colors.textPrimary, fontSize: 14, fontWeight: '500', marginBottom: 2 },
+    tokenStatus: { color: colors.success, fontSize: 12 },
+    expiryBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+    expiryText:  { fontSize: 11, fontWeight: '500' },
+    tokenDetails:{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14, gap: 0 },
+    tokenRow:    { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
+    tokenRowLabel: { color: colors.textMuted, fontSize: 12 },
+    tokenRowValue: { color: colors.textPrimary, fontSize: 12, fontWeight: '500' },
+    sectionLabel:  { color: colors.textMuted, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
+    infoCard:    { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
+    infoRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+    infoIconWrap:{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
+    infoText:    { color: colors.textSecondary, fontSize: 12, lineHeight: 18, flex: 1 },
+    rotateBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.dangerBorder, borderRadius: 12, paddingVertical: 14, marginBottom: 10 },
+    rotateBtnText: { color: colors.danger, fontSize: 14, fontWeight: '500' },
+    rotateHint:  { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 8 },
+  });
+
   const [token,      setToken]      = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rotating,   setRotating]   = useState(false);
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchToken = useCallback(async () => {
     try {
-      const res = await axios.get(`${API.BASE}/ble-token`, { headers });
+      const res = await api.get(API.BLE_TOKEN);
       setToken(res.data.data || null);
     } catch (err) {
       console.log('BLE token fetch error:', err.message);
@@ -29,7 +59,7 @@ export default function BLETokenScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchToken(); }, [fetchToken]);
   const onRefresh = () => { setRefreshing(true); fetchToken(); };
@@ -45,7 +75,7 @@ export default function BLETokenScreen({ navigation }) {
           onPress: async () => {
             setRotating(true);
             try {
-              const res = await axios.post(`${API.BASE}/ble-token/rotate`, {}, { headers });
+              const res = await api.post(API.BLE_TOKEN_ROTATE, { tokenId: token.token_id });
               setToken(res.data.data);
               Alert.alert('Token rotated', 'Your BLE token has been refreshed successfully.');
             } catch (err) {
@@ -181,33 +211,3 @@ export default function BLETokenScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:        { flex: 1, backgroundColor: colors.bg },
-  centered:    { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container:   { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
-  header:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  backBtn:     { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  title:       { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
-  subtitle:    { color: colors.textMuted, fontSize: 12 },
-  tokenCard:   { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 16, marginBottom: 24 },
-  tokenTop:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  tokenIconWrap: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
-  tokenInfo:   { flex: 1 },
-  tokenLabel:  { color: colors.textPrimary, fontSize: 14, fontWeight: '500', marginBottom: 2 },
-  tokenStatus: { color: colors.success, fontSize: 12 },
-  expiryBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
-  expiryText:  { fontSize: 11, fontWeight: '500' },
-  tokenDetails:{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14, gap: 0 },
-  tokenRow:    { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  tokenRowLabel: { color: colors.textMuted, fontSize: 12 },
-  tokenRowValue: { color: colors.textPrimary, fontSize: 12, fontWeight: '500' },
-  sectionLabel:  { color: colors.textMuted, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
-  infoCard:    { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, overflow: 'hidden', marginBottom: 24 },
-  infoRow:     { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-  infoIconWrap:{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
-  infoText:    { color: colors.textSecondary, fontSize: 12, lineHeight: 18, flex: 1 },
-  rotateBtn:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.dangerBorder, borderRadius: 12, paddingVertical: 14, marginBottom: 10 },
-  rotateBtnText: { color: colors.danger, fontSize: 14, fontWeight: '500' },
-  rotateHint:  { color: colors.textMuted, fontSize: 11, textAlign: 'center', lineHeight: 16 },
-});

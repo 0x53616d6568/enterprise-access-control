@@ -8,10 +8,115 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { changePassword } from '../../services/authService';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
 export default function ChangePasswordScreen({ navigation }) {
   const { accessToken, setIsFirstLogin } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe: {
+      flex:            1,
+      backgroundColor: colors.bg,
+    },
+    container: {
+      flexGrow:          1,
+      paddingHorizontal: 28,
+      paddingTop:        40,
+      paddingBottom:     32,
+    },
+    iconWrap: {
+      width:           52,
+      height:          52,
+      backgroundColor: colors.bgDeep,
+      borderWidth:     1,
+      borderColor:     colors.accentDark,
+      borderRadius:    16,
+      alignItems:      'center',
+      justifyContent:  'center',
+      marginBottom:    24,
+    },
+    title: {
+      color:         colors.textPrimary,
+      fontSize:      24,
+      fontWeight:    '500',
+      letterSpacing: -0.4,
+      marginBottom:  8,
+    },
+    subtitle: {
+      color:        colors.textMuted,
+      fontSize:     13,
+      lineHeight:   20,
+      marginBottom: 32,
+    },
+    fieldWrap: {
+      marginBottom: 14,
+    },
+    label: {
+      color:         colors.textMuted,
+      fontSize:      11,
+      letterSpacing: 0.4,
+      marginBottom:  7,
+      textTransform: 'uppercase',
+    },
+    passWrap: {
+      flexDirection:     'row',
+      alignItems:        'center',
+      backgroundColor:   colors.bgInput,
+      borderWidth:       1,
+      borderColor:       colors.border,
+      borderRadius:      10,
+      paddingHorizontal: 14,
+      paddingVertical:   13,
+    },
+    passInput: {
+      flex:     1,
+      color:    colors.textPrimary,
+      fontSize: 14,
+    },
+    rules: {
+      marginBottom: 24,
+      gap:          8,
+    },
+    rule: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           8,
+    },
+    ruleDot: {
+      width:           6,
+      height:          6,
+      borderRadius:    3,
+      backgroundColor: '#484F58',
+    },
+    ruleDotPass: {
+      backgroundColor: colors.success,
+    },
+    ruleText: {
+      color:    '#484F58',
+      fontSize: 12,
+    },
+    ruleTextPass: {
+      color: colors.success,
+    },
+    btnPrimary: {
+      backgroundColor: colors.accent,
+      borderRadius:    12,
+      paddingVertical: 15,
+      alignItems:      'center',
+      marginBottom:    14,
+    },
+    btnPrimaryText: {
+      color:      '#fff',
+      fontSize:   15,
+      fontWeight: '500',
+    },
+    skipNote: {
+      textAlign: 'center',
+      color:     '#484F58',
+      fontSize:  12,
+    },
+  });
 
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword,  setNewPassword]  = useState('');
@@ -170,106 +275,4 @@ export default function ChangePasswordScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex:            1,
-    backgroundColor: colors.bg,
-  },
-  container: {
-    flexGrow:          1,
-    paddingHorizontal: 28,
-    paddingTop:        40,
-    paddingBottom:     32,
-  },
-  iconWrap: {
-    width:           52,
-    height:          52,
-    backgroundColor: colors.bgDeep,
-    borderWidth:     1,
-    borderColor:     colors.accentDark,
-    borderRadius:    16,
-    alignItems:      'center',
-    justifyContent:  'center',
-    marginBottom:    24,
-  },
-  title: {
-    color:         colors.textPrimary,
-    fontSize:      24,
-    fontWeight:    '500',
-    letterSpacing: -0.4,
-    marginBottom:  8,
-  },
-  subtitle: {
-    color:        colors.textMuted,
-    fontSize:     13,
-    lineHeight:   20,
-    marginBottom: 32,
-  },
-  fieldWrap: {
-    marginBottom: 14,
-  },
-  label: {
-    color:         colors.textMuted,
-    fontSize:      11,
-    letterSpacing: 0.4,
-    marginBottom:  7,
-    textTransform: 'uppercase',
-  },
-  passWrap: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    backgroundColor:   colors.bgInput,
-    borderWidth:       1,
-    borderColor:       colors.border,
-    borderRadius:      10,
-    paddingHorizontal: 14,
-    paddingVertical:   13,
-  },
-  passInput: {
-    flex:     1,
-    color:    colors.textPrimary,
-    fontSize: 14,
-  },
-  rules: {
-    marginBottom: 24,
-    gap:          8,
-  },
-  rule: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           8,
-  },
-  ruleDot: {
-    width:           6,
-    height:          6,
-    borderRadius:    3,
-    backgroundColor: '#484F58',
-  },
-  ruleDotPass: {
-    backgroundColor: colors.success,
-  },
-  ruleText: {
-    color:    '#484F58',
-    fontSize: 12,
-  },
-  ruleTextPass: {
-    color: colors.success,
-  },
-  btnPrimary: {
-    backgroundColor: colors.accent,
-    borderRadius:    12,
-    paddingVertical: 15,
-    alignItems:      'center',
-    marginBottom:    14,
-  },
-  btnPrimaryText: {
-    color:      '#fff',
-    fontSize:   15,
-    fontWeight: '500',
-  },
-  skipNote: {
-    textAlign: 'center',
-    color:     '#484F58',
-    fontSize:  12,
-  },
-});
+

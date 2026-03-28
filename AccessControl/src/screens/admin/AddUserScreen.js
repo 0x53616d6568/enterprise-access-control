@@ -6,21 +6,48 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
-
-const ROLES = [
-  { id: 1, label: 'Employee', icon: 'person-outline',   color: colors.success,      bg: colors.successBg,  border: colors.successBorder },
-  { id: 2, label: 'Manager',  icon: 'people-outline',   color: colors.managerColor, bg: colors.managerBg,  border: colors.managerBorder },
-  { id: 3, label: 'Admin',    icon: 'shield-outline',   color: colors.accentText,   bg: colors.bgDeep,     border: colors.accentDark },
-];
+import { useAuth } from '../../context/AuthContext';
+import useThemeColors from '../../hooks/useThemeColors';
 
 const DEPARTMENTS = ['Engineering', 'Operations', 'IT', 'HR', 'Finance', 'Sales', 'Marketing'];
 
 export default function AddUserScreen({ navigation }) {
   const { accessToken } = useAuth();
+  const colors = useThemeColors();
+  
+  const styles = StyleSheet.create({
+    safe:      { flex: 1, backgroundColor: colors.bg },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
+    header:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
+    backBtn:   { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    title:     { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
+    subtitle:  { color: colors.textMuted, fontSize: 12 },
+    field:     { marginBottom: 16 },
+    label:     { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
+    input:     { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: colors.textPrimary, fontSize: 13 },
+    selectBtn: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    selectText: { color: colors.textPrimary, fontSize: 13 },
+    deptPicker: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: 4, overflow: 'hidden' },
+    deptOpt:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+    deptOptActive: { backgroundColor: colors.bgDeep },
+    deptOptText: { color: colors.textPrimary, fontSize: 13 },
+    roleGrid:  { flexDirection: 'row', gap: 8 },
+    roleOpt:   { flex: 1, alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14 },
+    roleIcon:  { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+    roleOptText: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },
+    infoBox:   { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 10, padding: 14, marginBottom: 20 },
+    infoText:  { color: colors.accentText, fontSize: 12, lineHeight: 18, flex: 1 },
+    submitBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+    submitText: { color: '#fff', fontSize: 15, fontWeight: '500' },
+  });
+
+  const ROLES = [
+    { id: 1, label: 'Employee', icon: 'person-outline',   color: colors.success,      bg: colors.successBg,  border: colors.successBorder },
+    { id: 2, label: 'Manager',  icon: 'people-outline',   color: colors.managerColor, bg: colors.managerBg,  border: colors.managerBorder },
+    { id: 3, label: 'Admin',    icon: 'shield-outline',   color: colors.accentText,   bg: colors.bgDeep,     border: colors.accentDark },
+  ];
   const [fullName,    setFullName]    = useState('');
   const [email,       setEmail]       = useState('');
   const [phone,       setPhone]       = useState('');
@@ -28,8 +55,6 @@ export default function AddUserScreen({ navigation }) {
   const [roleId,      setRoleId]      = useState(1);
   const [loading,     setLoading]     = useState(false);
   const [showDeptPicker, setShowDeptPicker] = useState(false);
-
-  const headers = { Authorization: `Bearer ${accessToken}` };
 
   const handleCreate = async () => {
     if (!fullName.trim() || !email.trim()) {
@@ -42,13 +67,13 @@ export default function AddUserScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      await axios.post(API.USERS, {
+      await api.post(API.USERS, {
         full_name:  fullName.trim(),
         email:      email.trim().toLowerCase(),
         phone:      phone.trim(),
         department: department,
         role_id:    roleId,
-      }, { headers });
+      });
       Alert.alert('Success', 'Account created and welcome email sent!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -186,29 +211,3 @@ export default function AddUserScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: colors.bg },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40 },
-  header:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 28 },
-  backBtn:   { width: 34, height: 34, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  title:     { color: colors.textPrimary, fontSize: 20, fontWeight: '500', letterSpacing: -0.4, marginBottom: 2 },
-  subtitle:  { color: colors.textMuted, fontSize: 12 },
-  field:     { marginBottom: 16 },
-  label:     { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
-  input:     { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: colors.textPrimary, fontSize: 13 },
-  selectBtn: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  selectText: { color: colors.textPrimary, fontSize: 13 },
-  deptPicker: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: 4, overflow: 'hidden' },
-  deptOpt:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  deptOptActive: { backgroundColor: colors.bgDeep },
-  deptOptText: { color: colors.textPrimary, fontSize: 13 },
-  roleGrid:  { flexDirection: 'row', gap: 8 },
-  roleOpt:   { flex: 1, alignItems: 'center', gap: 8, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14 },
-  roleIcon:  { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  roleOptText: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },
-  infoBox:   { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 10, padding: 14, marginBottom: 20 },
-  infoText:  { color: colors.accentText, fontSize: 12, lineHeight: 18, flex: 1 },
-  submitBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-  submitText: { color: '#fff', fontSize: 15, fontWeight: '500' },
-});

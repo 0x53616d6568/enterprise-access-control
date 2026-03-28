@@ -5,25 +5,83 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function AttendanceScreen() {
-  const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:    { flex: 1, backgroundColor: colors.bg },
+    centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:    { marginBottom: 20 },
+    title:     { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle:  { color: colors.textMuted, fontSize: 13 },
+    weekStrip: { flexDirection: 'row', gap: 6, marginBottom: 20 },
+    dayBtn: {
+      flex: 1, alignItems: 'center', paddingVertical: 10,
+      borderRadius: 12, gap: 6,
+    },
+    dayBtnHasData: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    dayBtnActive: { backgroundColor: colors.accent },
+    dayName:      { fontSize: 10, color: colors.textMuted },
+    dayNum:       { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+    dayTextActive: { color: '#fff' },
+    dayDot:       { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent },
+    dayDotActive: { backgroundColor: 'rgba(255,255,255,0.5)' },
+    summaryRow:   { flexDirection: 'row', gap: 10, marginBottom: 24 },
+    sumCard: {
+      flex: 1, backgroundColor: colors.bgCard,
+      borderWidth: 1, borderColor: colors.border,
+      borderRadius: 14, padding: 14,
+    },
+    sumLabel:  { color: colors.textMuted, fontSize: 11, marginBottom: 6 },
+    sumValue:  { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3 },
+    sumSub:    { fontSize: 11, marginTop: 3 },
+    sectionHeader: { marginBottom: 12 },
+    sectionTitle:  { color: colors.textSecondary, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' },
+    logItem: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingVertical: 13,
+      borderBottomWidth: 1, borderBottomColor: colors.bgCard,
+    },
+    logDate: {
+      width: 36, height: 36,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1, borderColor: colors.border,
+      borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    logDateNum: { fontSize: 14, fontWeight: '500', color: colors.textPrimary, lineHeight: 16 },
+    logDateDay: { fontSize: 9, color: colors.textMuted },
+    logInfo:   { flex: 1 },
+    logTimes:  { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
+    logHours:  { color: colors.textMuted, fontSize: 11 },
+    pill: {
+      paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 6, borderWidth: 1,
+    },
+    pillText:    { fontSize: 11, fontWeight: '500' },
+    pillFull:    { backgroundColor: colors.successBg, borderColor: colors.successBorder },
+    pillPartial: { backgroundColor: colors.warningBg, borderColor: colors.warningBorder },
+    pillAbsent:  { backgroundColor: colors.dangerBg,  borderColor: colors.dangerBorder },
+  });
+  
   const [attendance, setAttendance] = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchAttendance = useCallback(async () => {
     try {
-      const res = await axios.get(API.MY_ATTENDANCE, { headers });
+      const res = await api.get(API.MY_ATTENDANCE);
       setAttendance(res.data.data || []);
     } catch (err) {
       console.log('Attendance fetch error:', err.message);
@@ -31,7 +89,7 @@ export default function AttendanceScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
 
@@ -186,63 +244,3 @@ export default function AttendanceScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:    { marginBottom: 20 },
-  title:     { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle:  { color: colors.textMuted, fontSize: 13 },
-  weekStrip: { flexDirection: 'row', gap: 6, marginBottom: 20 },
-  dayBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 10,
-    borderRadius: 12, gap: 6,
-  },
-  dayBtnHasData: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  dayBtnActive: { backgroundColor: colors.accent },
-  dayName:      { fontSize: 10, color: colors.textMuted },
-  dayNum:       { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
-  dayTextActive: { color: '#fff' },
-  dayDot:       { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accent },
-  dayDotActive: { backgroundColor: 'rgba(255,255,255,0.5)' },
-  summaryRow:   { flexDirection: 'row', gap: 10, marginBottom: 24 },
-  sumCard: {
-    flex: 1, backgroundColor: colors.bgCard,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: 14, padding: 14,
-  },
-  sumLabel:  { color: colors.textMuted, fontSize: 11, marginBottom: 6 },
-  sumValue:  { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3 },
-  sumSub:    { fontSize: 11, marginTop: 3 },
-  sectionHeader: { marginBottom: 12 },
-  sectionTitle:  { color: colors.textSecondary, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' },
-  logItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: colors.bgCard,
-  },
-  logDate: {
-    width: 36, height: 36,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  logDateNum: { fontSize: 14, fontWeight: '500', color: colors.textPrimary, lineHeight: 16 },
-  logDateDay: { fontSize: 9, color: colors.textMuted },
-  logInfo:   { flex: 1 },
-  logTimes:  { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
-  logHours:  { color: colors.textMuted, fontSize: 11 },
-  pill: {
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, borderWidth: 1,
-  },
-  pillText:    { fontSize: 11, fontWeight: '500' },
-  pillFull:    { backgroundColor: colors.successBg, borderColor: colors.successBorder },
-  pillPartial: { backgroundColor: colors.warningBg, borderColor: colors.warningBorder },
-  pillAbsent:  { backgroundColor: colors.dangerBg,  borderColor: colors.dangerBorder },
-});

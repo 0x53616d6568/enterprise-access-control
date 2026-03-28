@@ -52,6 +52,10 @@ export const API = {
   PREFERENCES:     `${BASE_URL}/preferences`,
   THEME_PREFS:     `${BASE_URL}/preferences/theme`,
   NOTIF_PREFS:     `${BASE_URL}/preferences/notifications`,
+
+  // BLE Token
+  BLE_TOKEN:       `${BASE_URL}/auth/ble-token`,
+  BLE_TOKEN_ROTATE: `${BASE_URL}/auth/ble-token/rotate`,
 };
 
 export default API;

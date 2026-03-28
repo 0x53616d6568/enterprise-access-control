@@ -5,21 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
-const NOTIF_ICONS = {
-  ACCESS_GRANTED:  { icon: 'lock-open-outline',       color: colors.success,       bg: colors.successBg,  border: colors.successBorder },
-  ACCESS_DENIED:   { icon: 'lock-closed-outline',     color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
-  REQUEST_APPROVED:{ icon: 'checkmark-circle-outline',color: colors.success,       bg: colors.successBg,  border: colors.successBorder },
-  REQUEST_REJECTED:{ icon: 'close-circle-outline',    color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
-  VISITOR_ARRIVED: { icon: 'people-outline',          color: colors.warning,       bg: colors.warningBg,  border: colors.warningBorder },
-  TOKEN_EXPIRY:    { icon: 'bluetooth-outline',       color: colors.accentText,    bg: colors.bgDeep,     border: colors.accentDark },
-  SECURITY_ALERT:  { icon: 'warning-outline',         color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
-  DEFAULT:         { icon: 'notifications-outline',   color: colors.textSecondary, bg: colors.bgCard,     border: colors.border },
-};
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -35,16 +25,51 @@ const timeAgo = (dateStr) => {
 
 export default function NotificationsScreen({ navigation }) {
   const { accessToken } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe:          { flex: 1, backgroundColor: colors.bg },
+    centered:      { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+    container:     { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
+    header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+    title:         { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
+    subtitle:      { color: colors.textMuted, fontSize: 13 },
+    markBtn:       { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+    markBtnText:   { color: colors.accentText, fontSize: 12 },
+    emptyCard:     { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 32, alignItems: 'center', gap: 10, marginTop: 20 },
+    emptyIcon:     { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+    emptyTitle:    { color: colors.textPrimary, fontSize: 15, fontWeight: '500' },
+    emptySub:      { color: colors.textMuted, fontSize: 12, textAlign: 'center', lineHeight: 18 },
+    notifItem:     { flexDirection: 'row', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
+    notifItemUnread: { borderBottomColor: colors.border },
+    notifIcon:     { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexShrink: 0 },
+    notifContent:  { flex: 1 },
+    notifRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+    notifTitle:    { color: colors.textSecondary, fontSize: 13, fontWeight: '500', flex: 1 },
+    unreadDot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
+    notifBody:     { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginBottom: 5 },
+    notifTime:     { color: '#484F58', fontSize: 11 },
+  });
+
+  const NOTIF_ICONS = {
+    ACCESS_GRANTED:  { icon: 'lock-open-outline',       color: colors.success,       bg: colors.successBg,  border: colors.successBorder },
+    ACCESS_DENIED:   { icon: 'lock-closed-outline',     color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
+    REQUEST_APPROVED:{ icon: 'checkmark-circle-outline',color: colors.success,       bg: colors.successBg,  border: colors.successBorder },
+    REQUEST_REJECTED:{ icon: 'close-circle-outline',    color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
+    VISITOR_ARRIVED: { icon: 'people-outline',          color: colors.warning,       bg: colors.warningBg,  border: colors.warningBorder },
+    TOKEN_EXPIRY:    { icon: 'bluetooth-outline',       color: colors.accentText,    bg: colors.bgDeep,     border: colors.accentDark },
+    SECURITY_ALERT:  { icon: 'warning-outline',         color: colors.danger,        bg: colors.dangerBg,   border: colors.dangerBorder },
+    DEFAULT:         { icon: 'notifications-outline',   color: colors.textSecondary, bg: colors.bgCard,     border: colors.border },
+  };
+
   const [notifications, setNotifications] = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [marking,       setMarking]       = useState(false);
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await axios.get(API.NOTIFICATIONS, { headers });
+      const res = await api.get(API.NOTIFICATIONS);
       setNotifications(res.data.data || []);
     } catch (err) {
       console.log('Notifications fetch error:', err.message);
@@ -52,7 +77,7 @@ export default function NotificationsScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [accessToken]);
+  }, []);
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
   const onRefresh = () => { setRefreshing(true); fetchNotifications(); };
@@ -60,7 +85,7 @@ export default function NotificationsScreen({ navigation }) {
   const markAllRead = async () => {
     setMarking(true);
     try {
-      await axios.patch(API.NOTIFICATIONS_READ_ALL, {}, { headers });
+      await api.patch(API.NOTIFICATIONS_READ_ALL, {});
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (err) {
       console.log('Mark read error:', err.message);
@@ -146,27 +171,3 @@ export default function NotificationsScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: colors.bg },
-  centered:      { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  container:     { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  title:         { color: colors.textPrimary, fontSize: 22, fontWeight: '500', letterSpacing: -0.4, marginBottom: 3 },
-  subtitle:      { color: colors.textMuted, fontSize: 13 },
-  markBtn:       { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  markBtnText:   { color: colors.accentText, fontSize: 12 },
-  emptyCard:     { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 32, alignItems: 'center', gap: 10, marginTop: 20 },
-  emptyIcon:     { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  emptyTitle:    { color: colors.textPrimary, fontSize: 15, fontWeight: '500' },
-  emptySub:      { color: colors.textMuted, fontSize: 12, textAlign: 'center', lineHeight: 18 },
-  notifItem:     { flexDirection: 'row', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
-  notifItemUnread: { borderBottomColor: colors.border },
-  notifIcon:     { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexShrink: 0 },
-  notifContent:  { flex: 1 },
-  notifRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  notifTitle:    { color: colors.textSecondary, fontSize: 13, fontWeight: '500', flex: 1 },
-  unreadDot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
-  notifBody:     { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginBottom: 5 },
-  notifTime:     { color: '#484F58', fontSize: 11 },
-});
