@@ -26,7 +26,34 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AccessControl to access your camera for face recognition"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow AccessControl to access your location for attendance tracking"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#003366"
+        }
+      ]
+    ],
+    "permissions": [
+      "CAMERA",
+      "BLUETOOTH",
+      "BLUETOOTH_ADMIN",
+      "BLUETOOTH_SCAN",
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION"
     ]
   }
 }

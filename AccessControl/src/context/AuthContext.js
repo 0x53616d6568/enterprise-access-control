@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   login as loginService,
   logout as logoutService,
@@ -8,10 +8,35 @@ import {
   getAccessToken,
   getRefreshToken,
   getStoredUser,
+  refreshAccessToken,
 } from '../services/authService';
 import { getThemePreferences } from '../services/preferencesService';
 
 const AuthContext = createContext(null);
+
+// Helper function to decode JWT and get expiration time
+const getTokenExpiration = (token) => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const decoded = JSON.parse(
+      Buffer.from(parts[1], 'base64').toString('utf8')
+    );
+    return decoded.exp ? decoded.exp * 1000 : null; // Convert to milliseconds
+  } catch (err) {
+    return null;
+  }
+};
+
+// Helper function to check if token is expired or about to expire (within 2 minutes)
+const isTokenExpiringSoon = (token) => {
+  const expiration = getTokenExpiration(token);
+  if (!expiration) return false;
+  const now = Date.now();
+  const timeUntilExpiry = expiration - now;
+  return timeUntilExpiry < 2 * 60 * 1000; // Less than 2 minutes
+};
 
 export const AuthProvider = ({ children }) => {
   const [user,         setUser]         = useState(null);
@@ -20,6 +45,43 @@ export const AuthProvider = ({ children }) => {
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [theme,        setTheme]        = useState('dark');
   const [accentColor,  setAccentColor]  = useState('blue');
+  const refreshTimerRef = useRef(null);
+
+  // Function to refresh token
+  const performTokenRefresh = async () => {
+    try {
+      const newToken = await refreshAccessToken();
+      const refreshToken = await getRefreshToken();
+      await saveTokens(newToken, refreshToken);
+      setAccessToken(newToken);
+      console.log('✅ Token refreshed proactively');
+      scheduleTokenRefresh(newToken);
+    } catch (err) {
+      console.log('Token refresh failed:', err.message);
+    }
+  };
+
+  // Function to schedule next refresh based on token expiration
+  const scheduleTokenRefresh = (token) => {
+    // Clear existing timer
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    const expiration = getTokenExpiration(token);
+    if (!expiration) return;
+
+    const now = Date.now();
+    const timeUntilExpiry = expiration - now;
+    const refreshTime = timeUntilExpiry - 3 * 60 * 1000; // Refresh 3 minutes before expiry
+
+    if (refreshTime > 0) {
+      refreshTimerRef.current = setTimeout(() => {
+        performTokenRefresh();
+      }, refreshTime);
+      console.log(`⏱️ Token refresh scheduled in ${Math.floor(refreshTime / 1000)}s`);
+    }
+  };
 
   // Restore session on app start
   useEffect(() => {
@@ -32,6 +94,15 @@ export const AuthProvider = ({ children }) => {
         if (token && storedUser) {
           setAccessToken(token);
           setUser(storedUser);
+          
+          // Check if token is expiring soon and refresh if needed
+          if (isTokenExpiringSoon(token)) {
+            console.log('🔄 Token expiring soon, refreshing...');
+            await performTokenRefresh();
+          } else {
+            // Schedule next refresh
+            scheduleTokenRefresh(token);
+          }
           
           // Load theme preferences
           try {
@@ -49,6 +120,13 @@ export const AuthProvider = ({ children }) => {
       }
     };
     restoreSession();
+
+    // Cleanup timer on unmount
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -62,6 +140,9 @@ export const AuthProvider = ({ children }) => {
     setUser(user);
     setIsFirstLogin(is_first_login);
 
+    // Schedule token refresh after login
+    scheduleTokenRefresh(accessToken);
+
     return { is_first_login };
   };
 
@@ -72,6 +153,12 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.log('Logout error:', err.message);
     } finally {
+      // Clear refresh timer
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+
       await clearTokens();
       setUser(null);
       setAccessToken(null);
