@@ -31,10 +31,13 @@ export default function AppNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        headerStyle: {
-          backgroundColor: colors.bgCard || '#121212',
+        contentStyle: {
+          backgroundColor: colors.bg,
         },
-        headerTintColor: colors.textPrimary || '#FFFFFF',
+        headerStyle: {
+          backgroundColor: colors.bgCard,
+        },
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: {
           fontWeight: '600',
           fontSize: 17,

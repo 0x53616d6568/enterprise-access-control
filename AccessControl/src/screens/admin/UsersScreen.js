@@ -141,27 +141,34 @@ export default function UsersScreen({ navigation }) {
           const initials = u.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
           const inactive = u.status === 'INACTIVE';
           return (
-            <TouchableOpacity
-              key={u.user_id}
-              style={styles.userItem}
-              onPress={() => navigation.navigate('FaceEnrollment', { user: u })}
-            >
-              <View style={[styles.avatar, { backgroundColor: inactive ? colors.bgCard : avatarC.bg, borderColor: inactive ? colors.border : avatarC.border }]}>
-                <Text style={[styles.avatarText, { color: inactive ? '#484F58' : avatarC.text }]}>{initials}</Text>
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={[styles.userName, inactive && { color: '#484F58' }]}>{u.full_name}</Text>
-                <Text style={styles.userMeta}>{u.department} · {u.email}</Text>
-              </View>
-              <View style={styles.userRight}>
-                <View style={[styles.rolePill, { backgroundColor: roleInfo.bg, borderColor: roleInfo.border }]}>
-                  <Text style={[styles.roleText, { color: roleInfo.color }]}>{roleInfo.label}</Text>
+            <View key={u.user_id} style={styles.userItem}>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+                onPress={() => navigation.navigate('FaceEnrollment', { user: u })}
+              >
+                <View style={[styles.avatar, { backgroundColor: inactive ? colors.bgCard : avatarC.bg, borderColor: inactive ? colors.border : avatarC.border }]}>
+                  <Text style={[styles.avatarText, { color: inactive ? '#484F58' : avatarC.text }]}>{initials}</Text>
                 </View>
-                <Text style={[styles.statusText, { color: u.status === 'ACTIVE' ? colors.success : '#484F58' }]}>
-                  ● {u.status === 'ACTIVE' ? 'Active' : u.status === 'PENDING' ? 'Pending' : 'Inactive'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                <View style={styles.userInfo}>
+                  <Text style={[styles.userName, inactive && { color: '#484F58' }]}>{u.full_name}</Text>
+                  <Text style={styles.userMeta}>{u.department} · {u.email}</Text>
+                </View>
+                <View style={styles.userRight}>
+                  <View style={[styles.rolePill, { backgroundColor: roleInfo.bg, borderColor: roleInfo.border }]}>
+                    <Text style={[styles.roleText, { color: roleInfo.color }]}>{roleInfo.label}</Text>
+                  </View>
+                  <Text style={[styles.statusText, { color: u.status === 'ACTIVE' ? colors.success : '#484F58' }]}>
+                    ● {u.status === 'ACTIVE' ? 'Active' : u.status === 'PENDING' ? 'Pending' : 'Inactive'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ padding: 8 }}
+                onPress={() => navigation.navigate('EditUser', { user: u })}
+              >
+                <Ionicons name="create-outline" size={18} color={colors.accent} />
+              </TouchableOpacity>
+            </View>
           );
         })}
       </ScrollView>

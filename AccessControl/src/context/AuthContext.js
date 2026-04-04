@@ -9,6 +9,7 @@ import {
   getRefreshToken,
   getStoredUser,
   refreshAccessToken,
+  getCurrentUser,
 } from '../services/authService';
 import { getThemePreferences } from '../services/preferencesService';
 
@@ -171,6 +172,17 @@ export const AuthProvider = ({ children }) => {
     setUser(updatedUser);
   };
 
+  const refreshUser = async () => {
+    try {
+      if (!accessToken) return;
+      const updatedUser = await getCurrentUser(accessToken);
+      await saveUser(updatedUser);
+      setUser(updatedUser);
+    } catch (err) {
+      console.log('Failed to refresh user data:', err.message);
+    }
+  };
+
   const updateTheme = (newTheme) => {
     setTheme(newTheme);
   };
@@ -193,6 +205,7 @@ export const AuthProvider = ({ children }) => {
       login,
       logout,
       updateUser,
+      refreshUser,
     }}>
       {children}
     </AuthContext.Provider>

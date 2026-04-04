@@ -1,7 +1,7 @@
 // Change this to your machine's local IP when testing on a physical device
 // To find it: run "ipconfig" in PowerShell and look for IPv4 Address
 // e.g. 192.168.1.10
-const BASE_URL = 'http://192.168.1.138:3000/api';
+const BASE_URL = 'http://192.168.1.142:3000/api';
 
 export const API = {
   BASE_URL,

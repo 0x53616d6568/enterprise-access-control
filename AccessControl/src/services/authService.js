@@ -64,3 +64,11 @@ export const changePassword = async (accessToken, tempPassword, newPassword) => 
   );
   return response.data;
 };
+
+export const getCurrentUser = async (accessToken) => {
+  const response = await axios.get(
+    API.ME,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data.data;
+};

@@ -8,10 +8,227 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
-import colors from '../../constants/colors';
+import useThemeColors from '../../hooks/useThemeColors';
 
 export default function DashboardScreen({ navigation }) {
   const { user, accessToken, logout } = useAuth();
+  const colors = useThemeColors();
+
+  const styles = StyleSheet.create({
+    safe: {
+      flex:            1,
+      backgroundColor: colors.bg,
+    },
+    centered: {
+      flex:            1,
+      backgroundColor: colors.bg,
+      alignItems:      'center',
+      justifyContent:  'center',
+    },
+    container: {
+      paddingHorizontal: 24,
+      paddingTop:        16,
+      paddingBottom:     32,
+    },
+    header: {
+      flexDirection:  'row',
+      justifyContent: 'space-between',
+      alignItems:     'flex-start',
+      marginBottom:   24,
+    },
+    greeting: {
+      color:         colors.textPrimary,
+      fontSize:      22,
+      fontWeight:    '500',
+      letterSpacing: -0.4,
+      marginBottom:  3,
+    },
+    date: {
+      color:    colors.textMuted,
+      fontSize: 13,
+    },
+    notifBtn: {
+      width:           36,
+      height:          36,
+      backgroundColor: colors.bgCard,
+      borderWidth:     1,
+      borderColor:     colors.borderMid,
+      borderRadius:    10,
+      alignItems:      'center',
+      justifyContent:  'center',
+    },
+    notifDot: {
+      position:        'absolute',
+      top:             7,
+      right:           7,
+      width:           7,
+      height:          7,
+      borderRadius:    4,
+      backgroundColor: colors.accent,
+      borderWidth:     1.5,
+      borderColor:     colors.bg,
+    },
+    statusCard: {
+      backgroundColor: colors.bgDeep,
+      borderWidth:     1,
+      borderColor:     colors.accentDark,
+      borderRadius:    16,
+      padding:         16,
+      flexDirection:   'row',
+      alignItems:      'center',
+      justifyContent:  'space-between',
+      marginBottom:    20,
+    },
+    statusLeft: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      gap:           12,
+    },
+    statusIcon: {
+      width:           40,
+      height:          40,
+      backgroundColor: colors.accent,
+      borderRadius:    12,
+      alignItems:      'center',
+      justifyContent:  'center',
+    },
+    statusLabel: {
+      color:         colors.accentText,
+      fontSize:      11,
+      letterSpacing: 0.3,
+      marginBottom:  2,
+    },
+    statusValue: {
+      color:      colors.textPrimary,
+      fontSize:   15,
+      fontWeight: '500',
+    },
+    statusRight: {
+      alignItems: 'flex-end',
+    },
+    statusTime: {
+      color:    colors.textMuted,
+      fontSize: 12,
+    },
+    statusActive: {
+      color:    colors.success,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      gap:           10,
+      marginBottom:  24,
+    },
+    statCard: {
+      flex:            1,
+      backgroundColor: colors.bgCard,
+      borderWidth:     1,
+      borderColor:     colors.border,
+      borderRadius:    14,
+      padding:         14,
+    },
+    statLabel: {
+      color:        colors.textMuted,
+      fontSize:     11,
+      marginBottom: 6,
+    },
+    statValue: {
+      color:         colors.textPrimary,
+      fontSize:      20,
+      fontWeight:    '500',
+      letterSpacing: -0.5,
+    },
+    statSub: {
+      fontSize:  11,
+      marginTop: 3,
+    },
+    sectionHeader: {
+      flexDirection:  'row',
+      justifyContent: 'space-between',
+      alignItems:     'center',
+      marginBottom:   12,
+    },
+    sectionTitle: {
+      color:         colors.textSecondary,
+      fontSize:      11,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+    },
+    sectionLink: {
+      color:    colors.accent,
+      fontSize: 12,
+    },
+    emptyCard: {
+      backgroundColor: colors.bgCard,
+      borderWidth:     1,
+      borderColor:     colors.border,
+      borderRadius:    14,
+      padding:         24,
+      alignItems:      'center',
+      gap:             8,
+    },
+    emptyText: {
+      color:    colors.textMuted,
+      fontSize: 13,
+    },
+    logItem: {
+      flexDirection:  'row',
+      alignItems:     'center',
+      gap:            12,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.bgCard,
+    },
+    logIcon: {
+      width:          36,
+      height:         36,
+      borderRadius:   10,
+      alignItems:     'center',
+      justifyContent: 'center',
+    },
+    logIconGranted: {
+      backgroundColor: colors.successBg,
+      borderWidth:     1,
+      borderColor:     colors.successBorder,
+    },
+    logIconDenied: {
+      backgroundColor: colors.dangerBg,
+      borderWidth:     1,
+      borderColor:     colors.dangerBorder,
+    },
+    logInfo: {
+      flex: 1,
+    },
+    logDoor: {
+      color:        colors.textPrimary,
+      fontSize:     13,
+      fontWeight:   '500',
+      marginBottom: 2,
+    },
+    logMeta: {
+      color:    colors.textMuted,
+      fontSize: 11,
+    },
+    logBadge: {
+      paddingHorizontal: 8,
+      paddingVertical:   3,
+      borderRadius:      6,
+      borderWidth:       1,
+    },
+    badgeGranted: {
+      backgroundColor: colors.successBg,
+      borderColor:     colors.successBorder,
+    },
+    badgeDenied: {
+      backgroundColor: colors.dangerBg,
+      borderColor:     colors.dangerBorder,
+    },
+    logBadgeText: {
+      fontSize:   11,
+      fontWeight: '500',
+    },
+  });
 
   const [attendance,     setAttendance]     = useState([]);
   const [logs,           setLogs]           = useState([]);
@@ -206,219 +423,3 @@ export default function DashboardScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex:            1,
-    backgroundColor: colors.bg,
-  },
-  centered: {
-    flex:            1,
-    backgroundColor: colors.bg,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-  container: {
-    paddingHorizontal: 24,
-    paddingTop:        16,
-    paddingBottom:     32,
-  },
-  header: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'flex-start',
-    marginBottom:   24,
-  },
-  greeting: {
-    color:         colors.textPrimary,
-    fontSize:      22,
-    fontWeight:    '500',
-    letterSpacing: -0.4,
-    marginBottom:  3,
-  },
-  date: {
-    color:    colors.textMuted,
-    fontSize: 13,
-  },
-  notifBtn: {
-    width:           36,
-    height:          36,
-    backgroundColor: colors.bgCard,
-    borderWidth:     1,
-    borderColor:     colors.borderMid,
-    borderRadius:    10,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-  notifDot: {
-    position:        'absolute',
-    top:             7,
-    right:           7,
-    width:           7,
-    height:          7,
-    borderRadius:    4,
-    backgroundColor: colors.accent,
-    borderWidth:     1.5,
-    borderColor:     colors.bg,
-  },
-  statusCard: {
-    backgroundColor: colors.bgDeep,
-    borderWidth:     1,
-    borderColor:     colors.accentDark,
-    borderRadius:    16,
-    padding:         16,
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
-    marginBottom:    20,
-  },
-  statusLeft: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           12,
-  },
-  statusIcon: {
-    width:           40,
-    height:          40,
-    backgroundColor: colors.accent,
-    borderRadius:    12,
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-  statusLabel: {
-    color:         colors.accentText,
-    fontSize:      11,
-    letterSpacing: 0.3,
-    marginBottom:  2,
-  },
-  statusValue: {
-    color:      colors.textPrimary,
-    fontSize:   15,
-    fontWeight: '500',
-  },
-  statusRight: {
-    alignItems: 'flex-end',
-  },
-  statusTime: {
-    color:    colors.textMuted,
-    fontSize: 12,
-  },
-  statusActive: {
-    color:    colors.success,
-    fontSize: 11,
-    marginTop: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap:           10,
-    marginBottom:  24,
-  },
-  statCard: {
-    flex:            1,
-    backgroundColor: colors.bgCard,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    borderRadius:    14,
-    padding:         14,
-  },
-  statLabel: {
-    color:        colors.textMuted,
-    fontSize:     11,
-    marginBottom: 6,
-  },
-  statValue: {
-    color:         colors.textPrimary,
-    fontSize:      20,
-    fontWeight:    '500',
-    letterSpacing: -0.5,
-  },
-  statSub: {
-    fontSize:  11,
-    marginTop: 3,
-  },
-  sectionHeader: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   12,
-  },
-  sectionTitle: {
-    color:         colors.textSecondary,
-    fontSize:      11,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  sectionLink: {
-    color:    colors.accent,
-    fontSize: 12,
-  },
-  emptyCard: {
-    backgroundColor: colors.bgCard,
-    borderWidth:     1,
-    borderColor:     colors.border,
-    borderRadius:    14,
-    padding:         24,
-    alignItems:      'center',
-    gap:             8,
-  },
-  emptyText: {
-    color:    colors.textMuted,
-    fontSize: 13,
-  },
-  logItem: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap:            12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.bgCard,
-  },
-  logIcon: {
-    width:          36,
-    height:         36,
-    borderRadius:   10,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-  logIconGranted: {
-    backgroundColor: colors.successBg,
-    borderWidth:     1,
-    borderColor:     colors.successBorder,
-  },
-  logIconDenied: {
-    backgroundColor: colors.dangerBg,
-    borderWidth:     1,
-    borderColor:     colors.dangerBorder,
-  },
-  logInfo: {
-    flex: 1,
-  },
-  logDoor: {
-    color:        colors.textPrimary,
-    fontSize:     13,
-    fontWeight:   '500',
-    marginBottom: 2,
-  },
-  logMeta: {
-    color:    colors.textMuted,
-    fontSize: 11,
-  },
-  logBadge: {
-    paddingHorizontal: 8,
-    paddingVertical:   3,
-    borderRadius:      6,
-    borderWidth:       1,
-  },
-  badgeGranted: {
-    backgroundColor: colors.successBg,
-    borderColor:     colors.successBorder,
-  },
-  badgeDenied: {
-    backgroundColor: colors.dangerBg,
-    borderColor:     colors.dangerBorder,
-  },
-  logBadgeText: {
-    fontSize:   11,
-    fontWeight: '500',
-  },
-});

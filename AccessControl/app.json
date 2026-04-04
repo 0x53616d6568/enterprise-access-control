@@ -4,7 +4,7 @@
     "slug": "AccessControl",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/eac-icon-64.svg",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -23,7 +23,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/eac-icon-24.svg"
     },
     "plugins": [
       "expo-secure-store",

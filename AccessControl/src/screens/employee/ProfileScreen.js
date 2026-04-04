@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
+import { api } from '../../services/apiService';
+import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
   const colors = useThemeColors();
   
   const styles = StyleSheet.create({
@@ -18,6 +23,7 @@ export default function ProfileScreen({ navigation }) {
     hero:      { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 28 },
     avatarContainer: { position: 'relative' },
     avatar:    { width: 68, height: 68, borderRadius: 22, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, alignItems: 'center', justifyContent: 'center' },
+    avatarImage: { width: 68, height: 68, borderRadius: 22 },
     avatarText: { color: colors.accentText, fontSize: 24, fontWeight: '600' },
     editBadge: { position: 'absolute', bottom: -4, right: -4, backgroundColor: colors.accent, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.bg },
     heroInfo:  { flex: 1 },
@@ -41,6 +47,7 @@ export default function ProfileScreen({ navigation }) {
   });
   
   const [loggingOut, setLoggingOut] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Generate initials for the avatar placeholder
   const initials = user?.full_name
@@ -108,17 +115,79 @@ export default function ProfileScreen({ navigation }) {
   ];
 
   const handleLogout = () => {
-    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out', style: 'destructive',
-        onPress: async () => {
-          setLoggingOut(true);
-          await logout();
-          setLoggingOut(false);
+    showAlert(
+      'Sign out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            setLoggingOut(true);
+            await logout();
+            setLoggingOut(false);
+          },
         },
-      },
-    ]);
+      ],
+      'warning'
+    );
+  };
+
+  const handleProfilePhoto = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showAlert(
+          'Permission required',
+          'Please allow access to your photo library.',
+          [{ text: 'OK' }],
+          'warning'
+        );
+        return;
+      }
+
+      // Pick image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (result.canceled) return;
+
+      setUploadingPhoto(true);
+      
+      // Convert to base64 data URL
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+
+      // Upload to server
+      await api.put(API.USER(user.user_id), {
+        avatar_url: base64Image,
+      });
+
+      // Refresh user data
+      if (refreshUser) await refreshUser();
+      showAlert(
+        'Success',
+        'Profile photo updated successfully!',
+        [{ text: 'OK' }],
+        'success'
+      );
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      showAlert(
+        'Error',
+        'Failed to update profile photo. Please try again.',
+        [{ text: 'OK' }],
+        'error'
+      );
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   return (
@@ -127,11 +196,24 @@ export default function ProfileScreen({ navigation }) {
         
         <View style={styles.hero}>
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-            <TouchableOpacity style={styles.editBadge} activeOpacity={0.8}>
-              <Ionicons name="camera-outline" size={14} color="#fff" />
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            <TouchableOpacity 
+              style={styles.editBadge} 
+              activeOpacity={0.8}
+              onPress={handleProfilePhoto}
+              disabled={uploadingPhoto}
+            >
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera-outline" size={14} color="#fff" />
+              )}
             </TouchableOpacity>
           </View>
           

@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import colors from '../constants/colors';
+import useThemeColors from '../hooks/useThemeColors';
 
 import DashboardScreen     from '../screens/employee/DashboardScreen';
 import AttendanceScreen    from '../screens/employee/AttendanceScreen';
@@ -38,39 +38,43 @@ const ProfileStack = () => (
   </Stack.Navigator>
 );
 
-const ManagerTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: {
-        backgroundColor: colors.bgCard,
-        borderTopColor:  colors.border,
-        borderTopWidth:  1,
-        paddingBottom:   8,
-        paddingTop:      8,
-        height:          60,
-      },
-      tabBarActiveTintColor:   colors.accent,
-      tabBarInactiveTintColor: '#484F58',
-      tabBarLabelStyle: { fontSize: 10, marginTop: 2 },
-      tabBarIcon: ({ color }) => {
-        const icons = {
-          Home:       'home-outline',
-          Attendance: 'calendar-outline',
-          Team:       'people-outline',
-          Requests:   'document-text-outline',
-          Profile:    'person-outline',
-        };
-        return <Ionicons name={icons[route.name]} size={20} color={color} />;
-      },
-    })}
-  >
-    <Tab.Screen name="Home"       component={HomeStack} />
-    <Tab.Screen name="Attendance" component={AttendanceScreen} />
-    <Tab.Screen name="Team"       component={TeamScreen} />
-    <Tab.Screen name="Requests"   component={RequestsScreen} />
-    <Tab.Screen name="Profile"    component={ProfileStack} />
-  </Tab.Navigator>
-);
+const ManagerTabs = () => {
+  const colors = useThemeColors();
+  
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.bgCard,
+          borderTopColor:  colors.border,
+          borderTopWidth:  1,
+          paddingBottom:   8,
+          paddingTop:      8,
+          height:          60,
+        },
+        tabBarActiveTintColor:   colors.accent,
+        tabBarInactiveTintColor: '#484F58',
+        tabBarLabelStyle: { fontSize: 10, marginTop: 2 },
+        tabBarIcon: ({ color }) => {
+          const icons = {
+            Home:       'home-outline',
+            Attendance: 'calendar-outline',
+            Team:       'people-outline',
+            Requests:   'document-text-outline',
+            Profile:    'person-outline',
+          };
+          return <Ionicons name={icons[route.name]} size={20} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen name="Home"       component={HomeStack} />
+      <Tab.Screen name="Attendance" component={AttendanceScreen} />
+      <Tab.Screen name="Team"       component={TeamScreen} />
+      <Tab.Screen name="Requests"   component={RequestsScreen} />
+      <Tab.Screen name="Profile"    component={ProfileStack} />
+    </Tab.Navigator>
+  );
+};
 
 export default ManagerTabs;

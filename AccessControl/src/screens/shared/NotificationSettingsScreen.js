@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Switch, Alert, ActivityIndicator,
+  StyleSheet, Switch, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 import { saveNotificationPreferences, getNotificationPreferences } from '../../services/preferencesService';
 import useThemeColors from '../../hooks/useThemeColors';
 
@@ -46,6 +47,7 @@ const SETTINGS = [
 
 export default function NotificationSettingsScreen({ navigation }) {
   const { accessToken } = useAuth();
+  const { showAlert } = useAlert();
   const colors = useThemeColors();
   const initialState = {};
   SETTINGS.forEach(s => s.items.forEach(i => { initialState[i.key] = i.default; }));
@@ -103,7 +105,7 @@ export default function NotificationSettingsScreen({ navigation }) {
       });
 
       await saveNotificationPreferences(accessToken, settingsToSave);
-      Alert.alert('Success', 'Your notification preferences have been saved.');
+      showAlert('Success', 'Your notification preferences have been saved.', [{ text: 'OK' }], 'success');
       
       // Manually reload to ensure we show saved data
       setTimeout(async () => {
@@ -116,7 +118,7 @@ export default function NotificationSettingsScreen({ navigation }) {
       }, 300);
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to save preferences. Please try again.';
-      Alert.alert('Error', message);
+      showAlert('Error', message, [{ text: 'OK' }], 'error');
     } finally {
       setSaving(false);
     }

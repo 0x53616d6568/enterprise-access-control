@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 import { saveThemePreferences, getThemePreferences } from '../../services/preferencesService';
 import useThemeColors from '../../hooks/useThemeColors';
 
@@ -23,6 +24,7 @@ const ACCENT_COLORS = [
 
 export default function AppearanceScreen({ navigation }) {
   const { accessToken, updateTheme, updateAccentColor } = useAuth();
+  const { showAlert } = useAlert();
   const colors = useThemeColors();
   const [selectedTheme,  setSelectedTheme]  = useState('dark');
   const [selectedAccent, setSelectedAccent] = useState('blue');
@@ -57,10 +59,10 @@ export default function AppearanceScreen({ navigation }) {
       // Update context immediately
       updateTheme(selectedTheme);
       updateAccentColor(selectedAccent);
-      Alert.alert('Success', 'Theme preferences saved successfully.');
+      showAlert('Success', 'Theme preferences saved successfully.', [{ text: 'OK' }], 'success');
     } catch (err) {
       const message = err?.response?.data?.message || 'Failed to save preferences.';
-      Alert.alert('Error', message);
+      showAlert('Error', message, [{ text: 'OK' }], 'error');
     } finally {
       setSaving(false);
     }

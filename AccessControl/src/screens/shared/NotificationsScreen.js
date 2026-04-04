@@ -85,7 +85,7 @@ export default function NotificationsScreen({ navigation }) {
   const markAllRead = async () => {
     setMarking(true);
     try {
-      await api.patch(API.NOTIFICATIONS_READ_ALL, {});
+      await api.patch(API.MARK_ALL_READ, {});
       setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
     } catch (err) {
       console.log('Mark read error:', err.message);

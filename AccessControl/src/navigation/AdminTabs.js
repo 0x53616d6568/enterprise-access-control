@@ -8,6 +8,7 @@ import useThemeColors from '../hooks/useThemeColors';
 import DashboardScreen      from '../screens/employee/DashboardScreen';
 import UsersScreen          from '../screens/admin/UsersScreen';
 import AddUserScreen         from '../screens/admin/AddUserScreen';
+import EditUserScreen        from '../screens/admin/EditUserScreen';
 import DoorsScreen           from '../screens/admin/DoorsScreen';
 import AddDoorScreen         from '../screens/admin/AddDoorScreen';
 import EditDoorScreen        from '../screens/admin/EditDoorScreen';
@@ -15,6 +16,7 @@ import DoorAccessRulesScreen from '../screens/admin/DoorAccessRulesScreen';
 import LogsScreen            from '../screens/admin/LogsScreen';
 import FaceEnrollmentScreen from '../screens/admin/FaceEnrollmentScreen';
 import ProfileScreen         from '../screens/employee/ProfileScreen';
+import ReviewRequestsScreen  from '../screens/manager/ReviewRequestsScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -24,6 +26,7 @@ const UsersStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="UsersList"      component={UsersScreen} />
     <Stack.Screen name="AddUser"         component={AddUserScreen} />
+    <Stack.Screen name="EditUser"        component={EditUserScreen} />
     <Stack.Screen name="FaceEnrollment" component={FaceEnrollmentScreen} />
   </Stack.Navigator>
 );
@@ -59,21 +62,23 @@ const AdminTabs = () => {
         tabBarLabelStyle: { fontSize: 9, marginTop: 2 },
         tabBarIcon: ({ color }) => {
           const icons = {
-            Home:    'home-outline',
-            Users:   'people-outline',
-            Doors:   'lock-closed-outline',
-            Logs:    'document-text-outline',
-            Profile: 'person-outline',
+            Home:     'home-outline',
+            Users:    'people-outline',
+            Doors:    'lock-closed-outline',
+            Requests: 'document-text-outline',
+            Logs:     'list-outline',
+            Profile:  'person-outline',
           };
           return <Ionicons name={icons[route.name]} size={20} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Home"    component={DashboardScreen} />
-      <Tab.Screen name="Users"   component={UsersStack} />
-      <Tab.Screen name="Doors"   component={DoorsStack} />
-      <Tab.Screen name="Logs"    component={LogsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Home"     component={DashboardScreen} />
+      <Tab.Screen name="Users"    component={UsersStack} />
+      <Tab.Screen name="Doors"    component={DoorsStack} />
+      <Tab.Screen name="Requests" component={ReviewRequestsScreen} />
+      <Tab.Screen name="Logs"     component={LogsScreen} />
+      <Tab.Screen name="Profile"  component={ProfileScreen} />
     </Tab.Navigator>
   );
 };

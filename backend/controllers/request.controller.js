@@ -56,10 +56,15 @@ const reviewRequest = async (req, res, next) => {
     // Fetch request to notify the user
     const [rows] = await db.query(`SELECT user_id, type FROM requests WHERE request_id = ?`, [req.params.id]);
     if (rows.length) {
+      const notifType = status === 'APPROVED' ? 'REQUEST_APPROVED' : 'REQUEST_REJECTED';
+      const title = `Request ${status}`;
+      const message = `Your ${rows[0].type} request has been ${status.toLowerCase()}.`;
+      
+      // Save to database
       await db.query(
-        `INSERT INTO notifications (user_id, title, message)
-         VALUES (?, ?, ?)`,
-        [rows[0].user_id, `Request ${status}`, `Your ${rows[0].type} request has been ${status.toLowerCase()}.`]
+        `INSERT INTO notifications (user_id, title, message, type)
+         VALUES (?, ?, ?, ?)`,
+        [rows[0].user_id, title, message, notifType]
       );
     }
     return success(res, {}, `Request ${status.toLowerCase()}`);

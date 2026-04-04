@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Alert,
+  Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 import useThemeColors from '../../hooks/useThemeColors';
 
 export default function LoginScreen({ navigation }) {
   const { login, loginWithBiometric } = useAuth();
+  const { showAlert } = useAlert();
   const colors = useThemeColors();
 
   const styles = StyleSheet.create({
@@ -183,7 +185,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      showAlert('Missing fields', 'Please enter your email and password.', [{ text: 'OK' }], 'warning');
       return;
     }
     setLoading(true);
@@ -194,7 +196,7 @@ export default function LoginScreen({ navigation }) {
       }
     } catch (err) {
       const message = err?.response?.data?.message || 'Login failed. Please try again.';
-      Alert.alert('Login failed', message);
+      showAlert('Login failed', message, [{ text: 'OK' }], 'error');
     } finally {
       setLoading(false);
     }
@@ -204,12 +206,12 @@ export default function LoginScreen({ navigation }) {
     try {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       if (!compatible) {
-        Alert.alert('Not supported', 'Biometric authentication is not available on this device.');
+        showAlert('Not supported', 'Biometric authentication is not available on this device.', [{ text: 'OK' }], 'warning');
         return;
       }
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       if (!enrolled) {
-        Alert.alert('Not set up', 'No biometrics enrolled. Please set up fingerprint or Face ID in your device settings.');
+        showAlert('Not set up', 'No biometrics enrolled. Please set up fingerprint or Face ID in your device settings.', [{ text: 'OK' }], 'warning');
         return;
       }
       const result = await LocalAuthentication.authenticateAsync({
@@ -223,11 +225,11 @@ export default function LoginScreen({ navigation }) {
         try {
           await loginWithBiometric();
         } catch (err) {
-          Alert.alert('Sign in failed', 'Could not retrieve saved credentials. Please sign in with your password first.');
+          showAlert('Sign in failed', 'Could not retrieve saved credentials. Please sign in with your password first.', [{ text: 'OK' }], 'error');
         }
       }
     } catch (err) {
-      Alert.alert('Error', 'Biometric authentication failed. Please try again.');
+      showAlert('Error', 'Biometric authentication failed. Please try again.', [{ text: 'OK' }], 'error');
     }
   };
 
@@ -276,7 +278,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.label}>Password</Text>
             <View style={styles.passWrap}>
               <TextInput
-                style={[styles.input, { flex: 1, borderWidth: 0, padding: 0 }]}
+                style={[styles.input, { flex: 1, borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0 }]}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textHint}
                 secureTextEntry={!showPass}

@@ -120,14 +120,37 @@ const updateUser = async (req, res, next) => {
       return error(res, 'Insufficient permissions', 403);
 
     const { full_name, phone, department, avatar_url } = req.body;
+    
+    // Build update query dynamically based on provided fields
+    const updates = [];
+    const values = [];
+    
+    if (full_name !== undefined) {
+      updates.push('full_name = ?');
+      values.push(full_name);
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?');
+      values.push(phone);
+    }
+    if (department !== undefined) {
+      updates.push('department = ?');
+      values.push(department);
+    }
+    if (avatar_url !== undefined) {
+      updates.push('avatar_url = ?');
+      values.push(avatar_url);
+    }
+    
+    if (updates.length === 0) {
+      return error(res, 'No fields to update', 400);
+    }
+    
+    values.push(id);
+    
     await db.query(
-      `UPDATE users SET
-        full_name  = COALESCE(?, full_name),
-        phone      = COALESCE(?, phone),
-        department = COALESCE(?, department),
-        avatar_url = COALESCE(?, avatar_url)
-       WHERE user_id = ?`,
-      [full_name, phone, department, avatar_url, id]
+      `UPDATE users SET ${updates.join(', ')} WHERE user_id = ?`,
+      values
     );
     return success(res, {}, 'User updated');
   } catch (err) { next(err); }
@@ -144,17 +167,28 @@ const deleteUser = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// PATCH /api/users/push-token
+// POST /api/users/push-token - Save push notification token
 const updatePushToken = async (req, res, next) => {
   try {
-    const { push_token, device_id } = req.body;
+    const { push_token } = req.body;
+    
+    if (!push_token) {
+      return error(res, 'Push token is required', 400);
+    }
+
+    // Store push token in users table for simplicity
+    // Alternative: you could create a separate device_tokens table
     await db.query(
-      `UPDATE user_sessions SET push_token = ?
-       WHERE user_id = ? AND device_id = ? AND is_active = 1`,
-      [push_token, req.user.user_id, device_id]
+      `UPDATE users SET push_token = ? WHERE user_id = ?`,
+      [push_token, req.user.user_id]
     );
-    return success(res, {}, 'Push token updated');
-  } catch (err) { next(err); }
+
+    console.log(`✅ Push token saved for user ${req.user.user_id}`);
+    return success(res, {}, 'Push token saved');
+  } catch (err) { 
+    console.error('Error saving push token:', err);
+    next(err); 
+  }
 };
 
 module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser, updatePushToken };

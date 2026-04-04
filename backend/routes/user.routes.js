@@ -11,6 +11,6 @@ router.get('/:id',          authenticate, getUserById);
 router.post('/',            authenticate, authorize(5), createUser);
 router.put('/:id',          authenticate, updateUser);
 router.delete('/:id',       authenticate, authorize(5), deleteUser);
-router.patch('/push-token', authenticate, updatePushToken);
+router.post('/push-token',  authenticate, updatePushToken);
 
 module.exports = router;
