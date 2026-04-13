@@ -8,6 +8,7 @@ import DashboardScreen     from '../screens/employee/DashboardScreen';
 import AttendanceScreen    from '../screens/employee/AttendanceScreen';
 import RequestsScreen      from '../screens/employee/RequestsScreen';
 import ProfileScreen       from '../screens/employee/ProfileScreen';
+import VisitorsScreen       from '../screens/employee/VisitorsScreen';
 
 // Shared Screens
 import NotificationsScreen from '../screens/shared/NotificationsScreen';

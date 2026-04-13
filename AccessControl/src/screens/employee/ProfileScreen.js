@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useAlert } from '../../context/AlertContext';
 import { api } from '../../services/apiService';
+import { resendVerificationEmail } from '../../services/emailService';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
 
@@ -48,6 +49,7 @@ export default function ProfileScreen({ navigation }) {
   
   const [loggingOut, setLoggingOut] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
 
   // Generate initials for the avatar placeholder
   const initials = user?.full_name
@@ -86,6 +88,16 @@ export default function ProfileScreen({ navigation }) {
           bg: colors.warningBg, 
           border: colors.warningBorder, 
           onPress: () => navigation.navigate('ChangeCurrentPassword') 
+        },
+        { 
+          key: 'resendEmail', 
+          label: 'Resend Verification Email', 
+          icon: 'mail-outline', 
+          color: colors.success, 
+          bg: colors.successBg, 
+          border: colors.successBorder, 
+          onPress: handleResendVerificationEmail,
+          loading: resendingEmail
         },
       ]
     },
@@ -190,6 +202,29 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const handleResendVerificationEmail = async () => {
+    try {
+      setResendingEmail(true);
+      await resendVerificationEmail();
+      showAlert(
+        'Success',
+        'Verification email has been sent to your inbox!',
+        [{ text: 'OK' }],
+        'success'
+      );
+    } catch (err) {
+      console.error('Resend email error:', err);
+      showAlert(
+        'Error',
+        err.response?.data?.error || 'Failed to send verification email. Please try again.',
+        [{ text: 'OK' }],
+        'error'
+      );
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -266,6 +301,7 @@ export default function ProfileScreen({ navigation }) {
                   key={item.key}
                   style={[styles.menuRow, i === group.items.length - 1 && { borderBottomWidth: 0 }]}
                   onPress={item.onPress}
+                  disabled={item.loading}
                 >
                   <View style={styles.menuLeft}>
                     <View style={[styles.menuIcon, { backgroundColor: item.bg, borderColor: item.border }]}>
@@ -273,7 +309,11 @@ export default function ProfileScreen({ navigation }) {
                     </View>
                     <Text style={styles.menuLabel}>{item.label}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  {item.loading ? (
+                    <ActivityIndicator size="small" color={item.color} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>

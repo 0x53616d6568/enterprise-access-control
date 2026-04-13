@@ -11,7 +11,7 @@ import { changePassword } from '../../services/authService';
 import useThemeColors from '../../hooks/useThemeColors';
 
 export default function ChangePasswordScreen({ navigation }) {
-  const { accessToken, setIsFirstLogin } = useAuth();
+  const { accessToken, isFirstLogin, setIsFirstLogin } = useAuth();
   const colors = useThemeColors();
 
   const styles = StyleSheet.create({

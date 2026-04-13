@@ -5,6 +5,7 @@ import useThemeColors from '../hooks/useThemeColors';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ChangePasswordScreen from '../screens/auth/ChangePasswordScreen';
 import ChangeCurrentPasswordScreen from '../screens/auth/ChangeCurrentPasswordScreen';
   
@@ -23,7 +24,7 @@ import HelpCenterScreen from '../screens/shared/HelpCenterScreen';
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { user } = useAuth();
+  const { user, isFirstLogin } = useAuth();
   const colors = useThemeColors();
 
   return (
@@ -46,11 +47,36 @@ export default function AppNavigator() {
     >
       {!user ? (
         // 1. Auth Stack
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen 
+            name="ForgotPassword" 
+            component={ForgotPasswordScreen}
+            options={{
+              headerShown: true,
+              title: 'Reset Password',
+              headerTintColor: colors.accent,
+            }}
+          />
+        </>
+      ) : isFirstLogin ? (
+        // 2. First Login - Force password setup
+        <>
+          <Stack.Screen 
+            name="InitialPasswordSetup" 
+            component={ChangePasswordScreen}
+            options={{ 
+              headerShown: false,
+              animationEnabled: false,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: true, title: 'Change Password' }} />
+        </>
       ) : (
         
         <>
-          {/* 2. Main Role-based Entry Point */}
+          {/* 3. Main Role-based Entry Point */}
           {user.access_level >= 5 ? (
             <Stack.Screen name="MainTabs" component={AdminTabs} />
           ) : user.access_level >= 3 ? (

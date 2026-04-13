@@ -12,6 +12,9 @@ const {
   revokeBleTokenEndpoint,
   revokeAllBleTokens,
   checkBleTokenRotation,
+  requestPasswordReset,
+  verifyPasswordResetTokenEndpoint,
+  passwordReset,
 } = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth');
 
@@ -21,6 +24,11 @@ router.post('/refresh',                  refresh);
 router.post('/logout',                   authenticate, logout);
 router.get('/me',                        authenticate, getMe);
 router.post('/change-password',          authenticate, changePassword);
+
+// Password Reset endpoints (no auth required)
+router.post('/password-reset-request',   requestPasswordReset);
+router.post('/password-reset-verify',    verifyPasswordResetTokenEndpoint);
+router.post('/password-reset',           passwordReset);
 
 // BLE Token endpoints
 router.get('/ble-token',                 authenticate, getBleToken);

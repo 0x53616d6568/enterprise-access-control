@@ -47,18 +47,34 @@ export const AuthProvider = ({ children }) => {
   const [theme,        setTheme]        = useState('dark');
   const [accentColor,  setAccentColor]  = useState('blue');
   const refreshTimerRef = useRef(null);
+  const refreshAttemptsRef = useRef(0);
+  const MAX_REFRESH_ATTEMPTS = 3;
 
   // Function to refresh token
   const performTokenRefresh = async () => {
     try {
+      refreshAttemptsRef.current++;
+      
+      if (refreshAttemptsRef.current > MAX_REFRESH_ATTEMPTS) {
+        console.log('❌ Max refresh attempts reached, logging out');
+        await logout();
+        return;
+      }
+
       const newToken = await refreshAccessToken();
       const refreshToken = await getRefreshToken();
       await saveTokens(newToken, refreshToken);
       setAccessToken(newToken);
+      refreshAttemptsRef.current = 0; // Reset on success
       console.log('✅ Token refreshed proactively');
       scheduleTokenRefresh(newToken);
     } catch (err) {
       console.log('Token refresh failed:', err.message);
+      
+      if (refreshAttemptsRef.current >= MAX_REFRESH_ATTEMPTS) {
+        console.log('❌ Token refresh failed too many times, logging out');
+        await logout();
+      }
     }
   };
 
@@ -76,6 +92,15 @@ export const AuthProvider = ({ children }) => {
     const timeUntilExpiry = expiration - now;
     const refreshTime = timeUntilExpiry - 3 * 60 * 1000; // Refresh 3 minutes before expiry
 
+    // Safety check: don't schedule if refresh time is in the past or too soon
+    if (refreshTime < 30 * 1000) { // Minimum 30 seconds buffer
+      console.log('⚠️ Token expiry too close, deferring refresh scheduling');
+      refreshTimerRef.current = setTimeout(() => {
+        scheduleTokenRefresh(token);
+      }, 10 * 1000); // Check again in 10 seconds
+      return;
+    }
+
     if (refreshTime > 0) {
       refreshTimerRef.current = setTimeout(() => {
         performTokenRefresh();
@@ -87,14 +112,22 @@ export const AuthProvider = ({ children }) => {
   // Restore session on app start
   useEffect(() => {
     const restoreSession = async () => {
+      const sessionTimeout = setTimeout(() => {
+        console.log('⏱️ Session restore timeout, proceeding without session');
+        setIsLoading(false);
+      }, 15000); // 15 second timeout
+
       try {
         const [token, storedUser] = await Promise.all([
           getAccessToken(),
           getStoredUser(),
         ]);
+        clearTimeout(sessionTimeout);
+
         if (token && storedUser) {
           setAccessToken(token);
           setUser(storedUser);
+          setIsFirstLogin(storedUser?.is_first_login === true);
           
           // Check if token is expiring soon and refresh if needed
           if (isTokenExpiringSoon(token)) {
@@ -105,17 +138,26 @@ export const AuthProvider = ({ children }) => {
             scheduleTokenRefresh(token);
           }
           
-          // Load theme preferences
+          // Load theme preferences with timeout (non-blocking)
           try {
-            const themePrefs = await getThemePreferences(token);
+            const themePrefsPromise = getThemePreferences(token);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Theme load timeout')), 5000)
+            );
+            
+            const themePrefs = await Promise.race([themePrefsPromise, timeoutPromise]);
             setTheme(themePrefs.theme || 'dark');
             setAccentColor(themePrefs.accentColor || 'blue');
           } catch (err) {
             console.log('Failed to load theme preferences:', err.message);
+            // Use defaults on failure
+            setTheme('dark');
+            setAccentColor('blue');
           }
         }
       } catch (err) {
         console.log('Session restore failed:', err.message);
+        clearTimeout(sessionTimeout);
       } finally {
         setIsLoading(false);
       }
@@ -131,6 +173,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    refreshAttemptsRef.current = 0; // Reset refresh counter on new login
     const data = await loginService(email, password);
     const { accessToken, refreshToken, user, is_first_login } = data.data;
 
@@ -154,11 +197,12 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.log('Logout error:', err.message);
     } finally {
-      // Clear refresh timer
+      // Clear refresh timer and reset counter
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
+      refreshAttemptsRef.current = 0;
 
       await clearTokens();
       setUser(null);

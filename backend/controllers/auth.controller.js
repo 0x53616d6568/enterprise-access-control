@@ -11,6 +11,11 @@ const {
   revokeAllUserTokens,
   checkTokensForRotation,
 } = require('../utils/bleTokenService');
+const {
+  sendPasswordResetEmail,
+  verifyPasswordResetToken,
+  resetPasswordWithToken,
+} = require('../utils/emailService');
 
 // POST /api/auth/login
 const login = async (req, res, next) => {
@@ -339,6 +344,123 @@ const checkBleTokenRotation = async (req, res, next) => {
   }
 };
 
+// POST /api/auth/password-reset-request
+// Request a password reset email (no auth required)
+const requestPasswordReset = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return error(res, 'Email is required', 400);
+    }
+
+    // Find user by email
+    const [rows] = await db.query(
+      `SELECT user_id, full_name, email FROM users WHERE email = ? AND status != 'INACTIVE'`,
+      [email]
+    );
+
+    if (!rows.length) {
+      // Don't reveal if email exists (security)
+      return success(res, {}, 'If the email exists, a reset code has been sent');
+    }
+
+    const user = rows[0];
+
+    // Send password reset email
+    await sendPasswordResetEmail(user.user_id, user.email, user.full_name);
+
+    return success(res, {}, 'Password reset code sent to your email');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/password-reset-verify
+// Verify the reset token is still valid
+const verifyPasswordResetTokenEndpoint = async (req, res, next) => {
+  try {
+    const { email, token } = req.body;
+
+    if (!email || !token) {
+      return error(res, 'Email and token are required', 400);
+    }
+
+    // Find user
+    const [userRows] = await db.query(
+      `SELECT user_id FROM users WHERE email = ?`,
+      [email]
+    );
+
+    if (!userRows.length) {
+      return error(res, 'User not found', 404);
+    }
+
+    const userId = userRows[0].user_id;
+
+    // Verify token
+    const isValid = await verifyPasswordResetToken(userId, token);
+
+    if (!isValid) {
+      return error(res, 'Invalid or expired reset token', 401);
+    }
+
+    return success(res, {}, 'Token is valid');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/auth/password-reset
+// Complete password reset with token
+const passwordReset = async (req, res, next) => {
+  try {
+    const { email, token, new_password } = req.body;
+
+    if (!email || !token || !new_password) {
+      return error(res, 'Email, token, and new password are required', 400);
+    }
+
+    if (new_password.length < 8) {
+      return error(res, 'Password must be at least 8 characters', 400);
+    }
+
+    // Find user
+    const [userRows] = await db.query(
+      `SELECT user_id FROM users WHERE email = ?`,
+      [email]
+    );
+
+    if (!userRows.length) {
+      return error(res, 'User not found', 404);
+    }
+
+    const userId = userRows[0].user_id;
+
+    // Verify token is valid
+    const isValid = await verifyPasswordResetToken(userId, token);
+    if (!isValid) {
+      return error(res, 'Invalid or expired reset token', 401);
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(new_password, 10);
+
+    // Update password and mark token as used in transaction
+    await resetPasswordWithToken(userId, token, new_password);
+
+    await db.query(
+      `UPDATE users SET password_hash = ?, is_first_login = 0, status = 'ACTIVE'
+       WHERE user_id = ?`,
+      [passwordHash, userId]
+    );
+
+    return success(res, {}, 'Password has been reset successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   login,
   refresh,
@@ -351,4 +473,7 @@ module.exports = {
   revokeBleTokenEndpoint,
   revokeAllBleTokens,
   checkBleTokenRotation,
+  requestPasswordReset,
+  verifyPasswordResetTokenEndpoint,
+  passwordReset,
 };
