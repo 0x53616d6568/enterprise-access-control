@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  face-microservice:
+    build: .
+    container_name: secureapp-face-microservice
+    ports:
+      - "5000:5000"
+    environment:
+      - DEBUG=False
+      - FACE_SERVICE_HOST=0.0.0.0
+      - FACE_SERVICE_PORT=5000
+      - ARCFACE_MODEL=buffalo_l
+      - ARCFACE_DEVICE=-1  # CPU mode: -1, GPU mode: 0
+      - SIMILARITY_THRESHOLD=0.6
+      - FACE_SERVICE_API_KEY=your-secret-key-change-in-production
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./face_database:/app/face_database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

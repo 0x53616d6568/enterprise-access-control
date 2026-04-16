@@ -1,7 +1,7 @@
 // Change this to your machine's local IP when testing on a physical device
 // To find it: run "ipconfig" in PowerShell and look for IPv4 Address
 // e.g. 192.168.1.10
-const BASE_URL = 'http://192.168.56.1:3000/api';
+const BASE_URL = 'http://10.120.137.125:3000/api';
 
 export const API = {
   BASE_URL,
@@ -56,6 +56,14 @@ export const API = {
   // BLE Token
   BLE_TOKEN:       `${BASE_URL}/auth/ble-token`,
   BLE_TOKEN_ROTATE: `${BASE_URL}/auth/ble-token/rotate`,
+
+  // Face Recognition
+  FACE_ENROLL:     `${BASE_URL}/face/enroll`,
+  FACE_RECOGNIZE:  `${BASE_URL}/face/recognize`,
+  FACE_GET:        (id) => `${BASE_URL}/face/${id}`,
+  FACE_STATUS:     (id) => `${BASE_URL}/face/status/${id}`,
+  FACE_DELETE:     (id) => `${BASE_URL}/face/${id}`,
+  FACE_BATCH:      `${BASE_URL}/face/batch`,
 };
 
 export default API;

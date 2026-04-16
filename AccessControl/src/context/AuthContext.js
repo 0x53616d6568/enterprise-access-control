@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }) => {
       const sessionTimeout = setTimeout(() => {
         console.log('⏱️ Session restore timeout, proceeding without session');
         setIsLoading(false);
-      }, 15000); // 15 second timeout
+      }, 5000); // Reduced to 5 seconds
 
       try {
         const [token, storedUser] = await Promise.all([
@@ -125,6 +125,7 @@ export const AuthProvider = ({ children }) => {
         clearTimeout(sessionTimeout);
 
         if (token && storedUser) {
+          console.log('✅ Session restored from storage');
           setAccessToken(token);
           setUser(storedUser);
           setIsFirstLogin(storedUser?.is_first_login === true);
@@ -138,25 +139,34 @@ export const AuthProvider = ({ children }) => {
             scheduleTokenRefresh(token);
           }
           
-          // Load theme preferences with timeout (non-blocking)
-          try {
-            const themePrefsPromise = getThemePreferences(token);
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Theme load timeout')), 5000)
-            );
-            
-            const themePrefs = await Promise.race([themePrefsPromise, timeoutPromise]);
-            setTheme(themePrefs.theme || 'dark');
-            setAccentColor(themePrefs.accentColor || 'blue');
-          } catch (err) {
-            console.log('Failed to load theme preferences:', err.message);
-            // Use defaults on failure
-            setTheme('dark');
-            setAccentColor('blue');
-          }
+          // Load theme preferences in background (non-blocking)
+          // Don't wait for this to complete on app startup
+          setTimeout(() => {
+            try {
+              const themePrefsPromise = getThemePreferences(token);
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Theme load timeout')), 3000)
+              );
+              
+              Promise.race([themePrefsPromise, timeoutPromise])
+                .then(themePrefs => {
+                  setTheme(themePrefs.theme || 'dark');
+                  setAccentColor(themePrefs.accentColor || 'blue');
+                  console.log('✅ Theme preferences loaded');
+                })
+                .catch(err => {
+                  console.log('Theme load skipped:', err.message);
+                  // Keep defaults
+                });
+            } catch (err) {
+              console.log('Theme preferences error:', err.message);
+            }
+          }, 100);
+        } else {
+          console.log('📝 No stored session, user needs to login');
         }
       } catch (err) {
-        console.log('Session restore failed:', err.message);
+        console.log('Session restore error:', err.message);
         clearTimeout(sessionTimeout);
       } finally {
         setIsLoading(false);

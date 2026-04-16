@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../services/apiService';
+import { enrollUserFace } from '../../services/faceEnrollmentService';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
@@ -72,7 +73,24 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
   const [step,       setStep]       = useState(targetUser ? 1 : 0);
   const [capturing,  setCapturing]  = useState(false);
   const [enrolled,   setEnrolled]   = useState(false);
+  const [enrollmentCount, setEnrollmentCount] = useState(0);
   const cameraRef = useRef(null);
+
+  // Fetch current enrollment count when component mounts
+  React.useEffect(() => {
+    if (targetUser) {
+      checkEnrollmentStatus();
+    }
+  }, [targetUser]);
+
+  const checkEnrollmentStatus = async () => {
+    try {
+      const status = await api.get(`${API.FACE_STATUS(targetUser.user_id)}`);
+      setEnrollmentCount(status.data.data.count || 0);
+    } catch (err) {
+      console.log('Status check:', err.message);
+    }
+  };
 
   const handleCapture = async () => {
     if (!cameraRef.current) return;
@@ -86,11 +104,11 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
 
       setStep(2);
 
-      // Send to backend for face enrollment
-      await api.post(
-        `${API.USERS}/${targetUser.user_id}/enroll-face`,
-        { image_base64: photo.base64 }
-      );
+      // Enroll face - now supports multiple embeddings
+      const result = await enrollUserFace(targetUser.user_id, photo.base64);
+
+      // Update count
+      setEnrollmentCount(result.total_embeddings || enrollmentCount + 1);
 
       setStep(3);
       setTimeout(() => {
@@ -99,7 +117,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
       }, 1000);
 
     } catch (err) {
-      Alert.alert('Enrollment failed', err?.response?.data?.message || 'Could not process face. Please try again.');
+      Alert.alert('Enrollment failed', err.message || 'Could not process face. Please try again.');
       setStep(1);
     } finally {
       setCapturing(false);
@@ -134,7 +152,9 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{targetUser.full_name}</Text>
-              <Text style={styles.userMeta}>{targetUser.department} · {enrolled ? 'Profile enrolled' : 'No profile yet'}</Text>
+              <Text style={styles.userMeta}>
+                {targetUser.department} · {enrollmentCount > 0 ? `${enrollmentCount} face(s)` : 'No profile yet'}
+              </Text>
             </View>
             <Ionicons name="chevron-down" size={14} color="#484F58" />
           </View>
@@ -187,7 +207,8 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
             </View>
             <Text style={styles.successTitle}>Face enrolled successfully</Text>
             <Text style={styles.successSub}>
-              {targetUser.full_name} can now access face-auth doors
+              {targetUser.full_name} now has {enrollmentCount} enrolled face(s){'\n'}
+              Better accuracy with multiple angles
             </Text>
           </View>
         )}
@@ -238,9 +259,23 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
         )}
 
         {enrolled && (
-          <TouchableOpacity style={styles.enrollBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.enrollBtnText}>Done</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity 
+              style={[styles.enrollBtn, { marginBottom: 12 }]} 
+              onPress={() => {
+                setEnrolled(false);
+                setStep(1);
+              }}
+            >
+              <Text style={styles.enrollBtnText}>+ Enroll Another Face</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.enrollBtn, { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }]} 
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={[styles.enrollBtnText, { color: colors.textPrimary }]}>Done</Text>
+            </TouchableOpacity>
+          </>
         )}
 
       </ScrollView>
