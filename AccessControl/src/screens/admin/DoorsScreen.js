@@ -35,9 +35,16 @@ export default function DoorsScreen({ navigation }) {
     tag:       { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border },
     tagFace:   { backgroundColor: colors.bgDeep, borderColor: colors.accentDark },
     tagText:   { color: colors.textSecondary, fontSize: 11 },
-    doorFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+    doorFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, gap: 10 },
+    doorFooterLeft: { flex: 1 },
     footerLeft:  { color: colors.textMuted, fontSize: 11 },
     footerRight: { color: colors.accent, fontSize: 11 },
+    actionButtons: { flexDirection: 'row', gap: 8 },
+    actionBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    actionBtnEdit: { backgroundColor: colors.accentBg, borderColor: colors.accentDark },
+    actionBtnUsers: { backgroundColor: colors.successBg, borderColor: colors.successBorder },
+    actionBtnDelete: { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder },
+    actionBtnText: { fontSize: 10, fontWeight: '600' },
   });
 
   const getSecurityInfo = (level) => {
@@ -149,12 +156,31 @@ export default function DoorsScreen({ navigation }) {
 
                 {/* Footer */}
                 <View style={styles.doorFooter}>
-                  <Text style={styles.footerLeft}>
-                    Fallback: {door.fallback_method || 'None'}
-                  </Text>
-                  <Text style={styles.footerRight}>
-                    {door.pi_device_id ? `${door.pi_device_id} ●` : 'No Pi assigned'}
-                  </Text>
+                  <View style={styles.doorFooterLeft}>
+                    <Text style={styles.footerLeft}>
+                      Fallback: {door.fallback_method || 'None'}
+                    </Text>
+                  </View>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.actionBtnUsers]}
+                      onPress={() => navigation.navigate('UserAccess', { doorId: door.door_id, doorName: door.door_name })}
+                    >
+                      <Ionicons name="people-outline" size={14} color={colors.success} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.actionBtnEdit]}
+                      onPress={() => navigation.navigate('EditDoor', { doorId: door.door_id })}
+                    >
+                      <Ionicons name="create-outline" size={14} color={colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.actionBtnDelete]}
+                      onPress={() => handleDelete(door.door_id, door.door_name)}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             );

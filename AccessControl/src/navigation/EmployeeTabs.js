@@ -6,6 +6,7 @@ import useThemeColors from '../hooks/useThemeColors';
 
 import DashboardScreen     from '../screens/employee/DashboardScreen';
 import AttendanceScreen    from '../screens/employee/AttendanceScreen';
+import MyDoorsScreen       from '../screens/employee/MyDoorsScreen';
 import RequestsScreen      from '../screens/employee/RequestsScreen';
 import ProfileScreen       from '../screens/employee/ProfileScreen';
 import VisitorsScreen       from '../screens/employee/VisitorsScreen';
@@ -60,6 +61,7 @@ const EmployeeTabs = () => {
           const icons = {
             Home:       'home-outline',
             Attendance: 'calendar-outline',
+            MyDoors:    'lock-closed-outline',
             Requests:   'document-text-outline',
             Profile:    'person-outline',
           };
@@ -69,6 +71,7 @@ const EmployeeTabs = () => {
     >
       <Tab.Screen name="Home"       component={HomeStack} />
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
+      <Tab.Screen name="MyDoors"    component={MyDoorsScreen} />
       <Tab.Screen name="Requests"   component={RequestsScreen} />
       <Tab.Screen name="Profile"    component={ProfileStack} />
     </Tab.Navigator>
