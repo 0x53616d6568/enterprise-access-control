@@ -12,7 +12,7 @@ const getAllDoors = async (req, res, next) => {
 // Get user's accessible doors (role-based + individual assignments)
 const getUserAccessibleDoors = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Get user's role and access level
     const [userRows] = await db.query(`
