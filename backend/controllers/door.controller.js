@@ -23,12 +23,13 @@ const getUserAccessibleDoors = async (req, res, next) => {
     // Get doors accessible by role OR by individual user assignment
     const [doors] = await db.query(`
       SELECT DISTINCT d.*, 
-             COALESCE(dar.rule_id, uda.user_door_id) as rule_id,
+             COALESCE(dar.rule_id, uda.user_door_id) as access_id,
              COALESCE(dar.allowed_from, uda.allowed_from) as allowed_from,
              COALESCE(dar.allowed_until, uda.allowed_until) as allowed_until,
-             COALESCE(dar.days_of_week, uda.days_of_week) as days_of_week
+             COALESCE(dar.days_of_week, uda.days_of_week) as days_of_week,
+             CASE WHEN uda.user_door_id IS NOT NULL THEN 'individual' ELSE 'role' END as access_type
       FROM doors d
-      LEFT JOIN door_access_rules dar ON d.door_id = dar.door_id AND dar.role_id = ?
+      LEFT JOIN door_access_rules dar ON d.door_id = dar.door_id AND dar.role_id <= ?
       LEFT JOIN user_door_access uda ON d.door_id = uda.door_id AND uda.user_id = ?
       WHERE dar.rule_id IS NOT NULL OR uda.user_door_id IS NOT NULL
       ORDER BY d.door_name
