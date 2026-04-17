@@ -1,7 +1,11 @@
 // Change this to your machine's local IP when testing on a physical device
 // To find it: run "ipconfig" in PowerShell and look for IPv4 Address
 // e.g. 192.168.1.10
-const BASE_URL = 'http://10.120.137.125:3000/api';
+// LOCAL DEV (COMMENTED OUT):
+// const BASE_URL = 'http://10.120.137.125:3000/api';
+
+// PRODUCTION - Render deployment
+const BASE_URL = 'https://enterprise-access-control.onrender.com/api';
 
 export const API = {
   BASE_URL,
