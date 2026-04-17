@@ -9,70 +9,23 @@ const getAllDoors = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Get user's accessible doors (role-based + individual assignments)
+// Get user's accessible doors (individual assignments only - no role-based access)
 const getUserAccessibleDoors = async (req, res, next) => {
   try {
     const userId = req.user.user_id;
     
-    // Get user's role and access level
-    const [userRows] = await db.query(`
-      SELECT r.access_level FROM users u
-      LEFT JOIN roles r ON u.role_id = r.role_id
-      WHERE u.user_id = ?
-    `, [userId]);
-    
-    if (!userRows.length) {
-      console.log('getUserAccessibleDoors: User not found, userId:', userId);
-      return error(res, 'User not found', 404);
-    }
-    
-    const userRole = userRows[0].access_level;
-    console.log('getUserAccessibleDoors: userRole:', userRole, 'userId:', userId);
-    
-    // Get doors accessible by role (where role_id is <= user's access level)
-    const [roleDoors] = await db.query(`
-      SELECT DISTINCT d.door_id, d.door_name, d.location, d.security_level, 
-             dar.rule_id, dar.allowed_from, dar.allowed_until, dar.days_of_week, 'role' as access_type
-      FROM doors d
-      INNER JOIN door_access_rules dar ON d.door_id = dar.door_id
-      WHERE dar.role_id <= ?
-      ORDER BY d.door_name
-    `, [userRole]);
-    
-    console.log('getUserAccessibleDoors: roleDoors found:', roleDoors.length);
-    
-    // Get doors accessible by individual assignment
+    // Get doors accessible by individual assignment ONLY
     const [userDoors] = await db.query(`
       SELECT DISTINCT d.door_id, d.door_name, d.location, d.security_level,
-             uda.user_door_id as rule_id, uda.allowed_from, uda.allowed_until, uda.days_of_week, 'individual' as access_type
+             uda.user_door_id as rule_id, uda.allowed_from, uda.allowed_until, uda.days_of_week
       FROM doors d
       INNER JOIN user_door_access uda ON d.door_id = uda.door_id
       WHERE uda.user_id = ?
       ORDER BY d.door_name
     `, [userId]);
     
-    console.log('getUserAccessibleDoors: userDoors found:', userDoors.length);
-    
-    // Combine results, avoiding duplicates
-    const doorMap = new Map();
-    
-    roleDoors.forEach(door => {
-      if (!doorMap.has(door.door_id)) {
-        doorMap.set(door.door_id, door);
-      }
-    });
-    
-    userDoors.forEach(door => {
-      if (!doorMap.has(door.door_id)) {
-        doorMap.set(door.door_id, door);
-      }
-    });
-    
-    const combinedDoors = Array.from(doorMap.values());
-    console.log('getUserAccessibleDoors: total accessible doors:', combinedDoors.length);
-    return success(res, combinedDoors);
+    return success(res, userDoors);
   } catch (err) { 
-    console.log('getUserAccessibleDoors error:', err.message, err);
     next(err); 
   }
 };
@@ -95,7 +48,6 @@ const getUsersForDoor = async (req, res, next) => {
     
     return success(res, users);
   } catch (err) { 
-    console.log('getUsersForDoor error:', err.message);
     next(err); 
   }
 };
