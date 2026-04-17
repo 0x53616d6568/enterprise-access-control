@@ -20,23 +20,45 @@ const getUserAccessibleDoors = async (req, res, next) => {
     
     const userRole = userRows[0].access_level;
     
-    // Get doors accessible by role OR by individual user assignment
-    const [doors] = await db.query(`
-      SELECT DISTINCT d.*, 
-             COALESCE(dar.rule_id, uda.user_door_id) as access_id,
-             COALESCE(dar.allowed_from, uda.allowed_from) as allowed_from,
-             COALESCE(dar.allowed_until, uda.allowed_until) as allowed_until,
-             COALESCE(dar.days_of_week, uda.days_of_week) as days_of_week,
-             CASE WHEN uda.user_door_id IS NOT NULL THEN 'individual' ELSE 'role' END as access_type
+    // Get doors accessible by role (where role_id is <= user's access level)
+    const [roleDoors] = await db.query(`
+      SELECT DISTINCT d.*, dar.rule_id, dar.allowed_from, dar.allowed_until, dar.days_of_week, 'role' as access_type
       FROM doors d
-      LEFT JOIN door_access_rules dar ON d.door_id = dar.door_id AND dar.role_id <= ?
-      LEFT JOIN user_door_access uda ON d.door_id = uda.door_id AND uda.user_id = ?
-      WHERE dar.rule_id IS NOT NULL OR uda.user_door_id IS NOT NULL
+      INNER JOIN door_access_rules dar ON d.door_id = dar.door_id
+      WHERE dar.role_id <= ?
       ORDER BY d.door_name
-    `, [userRole, userId]);
+    `, [userRole]);
     
-    return success(res, doors || []);
-  } catch (err) { next(err); }
+    // Get doors accessible by individual assignment
+    const [userDoors] = await db.query(`
+      SELECT DISTINCT d.*, uda.user_door_id as rule_id, uda.allowed_from, uda.allowed_until, uda.days_of_week, 'individual' as access_type
+      FROM doors d
+      INNER JOIN user_door_access uda ON d.door_id = uda.door_id
+      WHERE uda.user_id = ?
+      ORDER BY d.door_name
+    `, [userId]);
+    
+    // Combine results, avoiding duplicates
+    const doorMap = new Map();
+    
+    roleDoors.forEach(door => {
+      if (!doorMap.has(door.door_id)) {
+        doorMap.set(door.door_id, door);
+      }
+    });
+    
+    userDoors.forEach(door => {
+      if (!doorMap.has(door.door_id)) {
+        doorMap.set(door.door_id, door);
+      }
+    });
+    
+    const combinedDoors = Array.from(doorMap.values());
+    return success(res, combinedDoors);
+  } catch (err) { 
+    console.log('getUserAccessibleDoors error:', err.message);
+    next(err); 
+  }
 };
 
 // Get users with door access for admin assignment
