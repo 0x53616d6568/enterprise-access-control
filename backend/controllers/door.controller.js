@@ -21,27 +21,37 @@ const getUserAccessibleDoors = async (req, res, next) => {
       WHERE u.user_id = ?
     `, [userId]);
     
-    if (!userRows.length) return error(res, 'User not found', 404);
+    if (!userRows.length) {
+      console.log('getUserAccessibleDoors: User not found, userId:', userId);
+      return error(res, 'User not found', 404);
+    }
     
     const userRole = userRows[0].access_level;
+    console.log('getUserAccessibleDoors: userRole:', userRole, 'userId:', userId);
     
     // Get doors accessible by role (where role_id is <= user's access level)
     const [roleDoors] = await db.query(`
-      SELECT DISTINCT d.*, dar.rule_id, dar.allowed_from, dar.allowed_until, dar.days_of_week, 'role' as access_type
+      SELECT DISTINCT d.door_id, d.door_name, d.location, d.security_level, 
+             dar.rule_id, dar.allowed_from, dar.allowed_until, dar.days_of_week, 'role' as access_type
       FROM doors d
       INNER JOIN door_access_rules dar ON d.door_id = dar.door_id
       WHERE dar.role_id <= ?
       ORDER BY d.door_name
     `, [userRole]);
     
+    console.log('getUserAccessibleDoors: roleDoors found:', roleDoors.length);
+    
     // Get doors accessible by individual assignment
     const [userDoors] = await db.query(`
-      SELECT DISTINCT d.*, uda.user_door_id as rule_id, uda.allowed_from, uda.allowed_until, uda.days_of_week, 'individual' as access_type
+      SELECT DISTINCT d.door_id, d.door_name, d.location, d.security_level,
+             uda.user_door_id as rule_id, uda.allowed_from, uda.allowed_until, uda.days_of_week, 'individual' as access_type
       FROM doors d
       INNER JOIN user_door_access uda ON d.door_id = uda.door_id
       WHERE uda.user_id = ?
       ORDER BY d.door_name
     `, [userId]);
+    
+    console.log('getUserAccessibleDoors: userDoors found:', userDoors.length);
     
     // Combine results, avoiding duplicates
     const doorMap = new Map();
@@ -59,9 +69,10 @@ const getUserAccessibleDoors = async (req, res, next) => {
     });
     
     const combinedDoors = Array.from(doorMap.values());
+    console.log('getUserAccessibleDoors: total accessible doors:', combinedDoors.length);
     return success(res, combinedDoors);
   } catch (err) { 
-    console.log('getUserAccessibleDoors error:', err.message);
+    console.log('getUserAccessibleDoors error:', err.message, err);
     next(err); 
   }
 };
