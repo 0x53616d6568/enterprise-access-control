@@ -14,8 +14,13 @@ const getUserAccessibleDoors = async (req, res, next) => {
   try {
     const userId = req.user.id;
     
-    // Get user's role
-    const [userRows] = await db.query(`SELECT access_level FROM users WHERE user_id = ?`, [userId]);
+    // Get user's role and access level
+    const [userRows] = await db.query(`
+      SELECT r.access_level FROM users u
+      LEFT JOIN roles r ON u.role_id = r.role_id
+      WHERE u.user_id = ?
+    `, [userId]);
+    
     if (!userRows.length) return error(res, 'User not found', 404);
     
     const userRole = userRows[0].access_level;
@@ -68,16 +73,20 @@ const getUsersForDoor = async (req, res, next) => {
     
     // Get all users and their access status for this door
     const [users] = await db.query(`
-      SELECT u.user_id, u.name, u.email, u.access_level,
+      SELECT u.user_id, u.full_name as name, u.email, COALESCE(r.access_level, 0) as access_level,
              CASE WHEN uda.user_door_id IS NOT NULL THEN 1 ELSE 0 END as has_access,
              uda.user_door_id, uda.allowed_from, uda.allowed_until, uda.days_of_week
       FROM users u
+      LEFT JOIN roles r ON u.role_id = r.role_id
       LEFT JOIN user_door_access uda ON u.user_id = uda.user_id AND uda.door_id = ?
-      ORDER BY u.name
+      ORDER BY u.full_name
     `, [doorId]);
     
     return success(res, users);
-  } catch (err) { next(err); }
+  } catch (err) { 
+    console.log('getUsersForDoor error:', err.message);
+    next(err); 
+  }
 };
 
 // Assign door access to a user
@@ -106,7 +115,10 @@ const assignUserDoor = async (req, res, next) => {
     }
     
     return success(res, {}, 'User door access updated', 201);
-  } catch (err) { next(err); }
+  } catch (err) { 
+    console.log('assignUserDoor error:', err.message);
+    next(err); 
+  }
 };
 
 // Remove door access from user
@@ -115,7 +127,10 @@ const removeUserDoor = async (req, res, next) => {
     const { user_id, door_id } = req.body;
     await db.query(`DELETE FROM user_door_access WHERE user_id = ? AND door_id = ?`, [user_id, door_id]);
     return success(res, {}, 'User door access removed');
-  } catch (err) { next(err); }
+  } catch (err) { 
+    console.log('removeUserDoor error:', err.message);
+    next(err); 
+  }
 };
 
 const getDoorById = async (req, res, next) => {
