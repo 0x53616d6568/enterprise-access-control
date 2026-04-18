@@ -43,19 +43,23 @@ class FaceRecognitionModel:
         try:
             logger.info(f"[INIT] Starting model initialization: {Config.ARCFACE_MODEL}")
             
-            # Disable all providers except CPU (prevents memory duplication)
-            # Must be done BEFORE FaceAnalysis initialization
+            # Set ONNX to single-threaded mode to reduce memory
             try:
                 import onnxruntime
                 onnxruntime.set_default_logger_severity(3)  # Suppress warnings
-                logger.info("[INIT] ONNX Runtime configured")
+                
+                # Force single-threaded execution to reduce memory footprint
+                session_options = onnxruntime.SessionOptions()
+                session_options.intra_op_num_threads = 1
+                session_options.inter_op_num_threads = 1
+                logger.info("[INIT] ONNX Runtime configured: single-threaded mode")
             except Exception as e:
                 logger.warning(f"[INIT] ONNX config warning: {e}")
             
             # Initialize with minimal set of tasks to reduce memory
-            # Only enable necessary components
+            # Only enable necessary components (detection + recognition)
             logger.info("[INIT] Creating FaceAnalysis instance...")
-            self.arcface = FaceAnalysis(name=Config.ARCFACE_MODEL)
+            self.arcface = FaceAnalysis(name=Config.ARCFACE_MODEL, allowed_modules=['detection', 'recognition'])
             logger.info("[INIT] FaceAnalysis instance created, calling prepare()...")
             
             ctx_id = int(Config.ARCFACE_DEVICE)
@@ -63,7 +67,7 @@ class FaceRecognitionModel:
             logger.info("[INIT] Model prepare() completed successfully")
             
             self.is_initialized = True
-            logger.info("✅ InsightFace model initialized successfully (CPU-only, minimal config)")
+            logger.info("✅ InsightFace model initialized successfully (CPU-only, minimal modules)")
         except Exception as e:
             logger.error(f"❌ CRITICAL: Failed to initialize InsightFace model")
             logger.error(f"   Error type: {type(e).__name__}")
