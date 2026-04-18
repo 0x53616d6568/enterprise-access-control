@@ -41,26 +41,35 @@ class FaceRecognitionModel:
     def _initialize_model(self):
         """Initialize InsightFace model - MINIMAL for Render (disable unused detectors)"""
         try:
-            logger.info(f"Initializing InsightFace model: {Config.ARCFACE_MODEL}")
+            logger.info(f"[INIT] Starting model initialization: {Config.ARCFACE_MODEL}")
             
             # Disable all providers except CPU (prevents memory duplication)
             # Must be done BEFORE FaceAnalysis initialization
             try:
                 import onnxruntime
                 onnxruntime.set_default_logger_severity(3)  # Suppress warnings
-            except:
-                pass
+                logger.info("[INIT] ONNX Runtime configured")
+            except Exception as e:
+                logger.warning(f"[INIT] ONNX config warning: {e}")
             
             # Initialize with minimal set of tasks to reduce memory
             # Only enable necessary components
+            logger.info("[INIT] Creating FaceAnalysis instance...")
             self.arcface = FaceAnalysis(name=Config.ARCFACE_MODEL)
+            logger.info("[INIT] FaceAnalysis instance created, calling prepare()...")
+            
             ctx_id = int(Config.ARCFACE_DEVICE)
             self.arcface.prepare(ctx_id=ctx_id, providers=['CPUExecutionProvider'])
+            logger.info("[INIT] Model prepare() completed successfully")
             
             self.is_initialized = True
             logger.info("✅ InsightFace model initialized successfully (CPU-only, minimal config)")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize InsightFace model: {str(e)}")
+            logger.error(f"❌ CRITICAL: Failed to initialize InsightFace model")
+            logger.error(f"   Error type: {type(e).__name__}")
+            logger.error(f"   Error message: {str(e)}")
+            import traceback
+            logger.error(f"   Traceback: {traceback.format_exc()}")
             raise
     
     def _load_database(self):
