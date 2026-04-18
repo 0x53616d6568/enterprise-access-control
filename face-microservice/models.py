@@ -42,27 +42,37 @@ class FaceRecognitionModel:
             raise
     
     def _load_database(self):
-        """Load all face embeddings from database (from your recognize_face.py logic)"""
+        """Scan database directory (LAZY LOAD - only load embeddings on demand)"""
         try:
             os.makedirs(Config.FACE_DB_PATH, exist_ok=True)
             
-            # -------------------------------
-            # Load database embeddings (from recognize_face.py)
-            # -------------------------------
+            # Just scan for available files, don't load them yet (memory optimization for Render)
+            available_users = []
             for file in os.listdir(Config.FACE_DB_PATH):
                 if file.endswith('.npy'):
-                    user_id = int(file[:-4])  # Remove .npy extension
-                    filepath = os.path.join(Config.FACE_DB_PATH, file)
-                    
-                    emb = np.load(filepath)
-                    emb = emb / np.linalg.norm(emb)  # normalize (from your code)
-                    
-                    self.face_database[user_id] = emb
-                    logger.debug(f"Loaded embedding for user {user_id}")
+                    user_id = int(file[:-4])
+                    available_users.append(user_id)
             
-            logger.info(f"✅ Loaded {len(self.face_database)} face embeddings from database")
+            logger.info(f"✅ Scanned face database: {len(available_users)} embeddings available (lazy-load enabled)")
         except Exception as e:
-            logger.error(f"⚠️ Error loading face database: {str(e)}")
+            logger.error(f"⚠️ Error scanning face database: {str(e)}")
+    
+    def _load_embedding_file(self, user_id: int) -> Optional[np.ndarray]:
+        """Load a single embedding file from disk (called on-demand)"""
+        try:
+            filepath = os.path.join(Config.FACE_DB_PATH, f"{user_id}.npy")
+            if not os.path.exists(filepath):
+                return None
+            
+            emb = np.load(filepath)
+            emb = emb / np.linalg.norm(emb)  # normalize
+            
+            # Cache in memory for repeated use
+            self.face_database[user_id] = emb
+            return emb
+        except Exception as e:
+            logger.error(f"Error loading embedding for user {user_id}: {str(e)}")
+            return None
     
     def extract_embedding(self, image_base64: str) -> Optional[np.ndarray]:
         """
@@ -130,13 +140,18 @@ class FaceRecognitionModel:
             raise
     
     def get_embedding(self, user_id: int) -> Optional[np.ndarray]:
-        """Get stored embedding for user"""
-        return self.face_database.get(user_id)
+        """Get stored embedding for user (lazy-load from disk if not in cache)"""
+        # Check cache first
+        if user_id in self.face_database:
+            return self.face_database[user_id]
+        
+        # Load from disk on-demand
+        return self._load_embedding_file(user_id)
     
     def recognize_face(self, image_base64: str) -> Tuple[Optional[int], float]:
         """
-        Recognize face in image and return best match
-        (from your recognize_face.py logic)
+        Recognize face in image and return best match (LAZY-LOAD)
+        Loads embeddings from disk only as needed to avoid OOM
         
         Args:
             image_base64: Base64 encoded image
@@ -150,17 +165,21 @@ class FaceRecognitionModel:
             if embedding is None:
                 return None, 0.0
             
-            if not self.face_database:
-                return None, 0.0
-            
-            # Compare with database (from your recognize_face.py)
+            # Scan disk for available embeddings (no pre-loading)
             best_score = 0
             best_match = None
-            for user_id, db_emb in self.face_database.items():
-                score = self._cosine_similarity(embedding, db_emb)
-                if score > best_score:
-                    best_score = score
-                    best_match = user_id
+            
+            for file in os.listdir(Config.FACE_DB_PATH):
+                if file.endswith('.npy'):
+                    user_id = int(file[:-4])
+                    
+                    # Load THIS embedding on-demand
+                    db_emb = self._load_embedding_file(user_id)
+                    if db_emb is not None:
+                        score = self._cosine_similarity(embedding, db_emb)
+                        if score > best_score:
+                            best_score = score
+                            best_match = user_id
             
             return best_match, float(best_score)
         except Exception as e:
