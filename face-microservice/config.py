@@ -11,9 +11,9 @@ class Config:
     PORT = int(os.getenv('PORT', os.getenv('FACE_SERVICE_PORT', 5000)))
     HOST = os.getenv('FACE_SERVICE_HOST', '0.0.0.0')
     
-    # InsightFace Model
-    ARCFACE_MODEL = os.getenv('ARCFACE_MODEL', 'buffalo_s')  # Options: 'buffalo_l', 'buffalo_m', 'buffalo_s' | Using buffalo_s for Render compatibility
-    ARCFACE_DEVICE = os.getenv('ARCFACE_DEVICE', '-1')  # 0 for GPU, -1 for CPU | Changed to CPU for Render
+    # InsightFace Model - HARDCODED FOR RENDER (buffalo_s only)
+    ARCFACE_MODEL = 'buffalo_s'  # FIXED: buffalo_s ONLY for Render (env override disabled)
+    ARCFACE_DEVICE = -1  # FIXED: CPU only (-1) for Render
     
     # Embedding settings
     EMBEDDING_DIMENSION = 512
@@ -26,7 +26,7 @@ class Config:
     FACE_DB_PATH = os.getenv('FACE_DB_PATH', './face_database')
     
     # Security
-    API_KEY = os.getenv('FACE_SERVICE_API_KEY', 'your-secret-key-change-in-production')
+    API_KEY = os.getenv('FACE_SERVICE_API_KEY', 'sk-face-xyz123')
     
     # Logging
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
