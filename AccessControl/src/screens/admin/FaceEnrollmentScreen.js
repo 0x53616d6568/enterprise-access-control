@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../services/apiService';
 import { enrollUserFace } from '../../services/faceEnrollmentService';
 import { useAuth } from '../../context/AuthContext';
@@ -74,6 +75,8 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
   const [capturing,  setCapturing]  = useState(false);
   const [enrolled,   setEnrolled]   = useState(false);
   const [enrollmentCount, setEnrollmentCount] = useState(0);
+  const [cameraFacing, setCameraFacing] = useState('front');
+  const [useGallery, setUseGallery] = useState(false);
   const cameraRef = useRef(null);
 
   // Fetch current enrollment count when component mounts
@@ -92,35 +95,45 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
     }
   };
 
-  const handleCapture = async () => {
-    if (!cameraRef.current) return;
-    setCapturing(true);
+  const toggleCameraFacing = () => {
+    setCameraFacing(prev => prev === 'front' ? 'back' : 'front');
+  };
+
+  const pickImageFromGallery = async () => {
     try {
-      // Take photo
-      const photo = await cameraRef.current.takePictureAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        aspect: [1, 1],
         quality: 0.8,
         base64: true,
       });
 
+      if (!result.canceled) {
+        handleEnrollment(result.assets[0].base64);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to pick image: ' + err.message);
+    }
+  };
+
+  const handleEnrollment = async (base64Image) => {
+    setCapturing(true);
+    try {
       setStep(2);
-
-      // Enroll face - now supports multiple embeddings
-      const result = await enrollUserFace(targetUser.user_id, photo.base64);
-
-      // Update count
+      const result = await enrollUserFace(targetUser.user_id, base64Image);
       setEnrollmentCount(result.total_embeddings || enrollmentCount + 1);
-
       setStep(3);
       setTimeout(() => {
         setEnrolled(true);
         setStep(4);
       }, 1000);
-
     } catch (err) {
       Alert.alert('Enrollment failed', err.message || 'Could not process face. Please try again.');
       setStep(1);
     } finally {
       setCapturing(false);
+      setUseGallery(false);
     }
   };
 
@@ -167,16 +180,59 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
+        {/* Camera/Gallery options */}
+        {!enrolled && targetUser && !useGallery && step === 1 && (
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <TouchableOpacity
+              style={[
+                { flex: 1, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingVertical: 12, alignItems: 'center', gap: 6 }
+              ]}
+              onPress={() => setUseGallery(false)}
+            >
+              <Ionicons name="camera" size={20} color={colors.accent} />
+              <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '500' }}>Take Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                { flex: 1, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingVertical: 12, alignItems: 'center', gap: 6 }
+              ]}
+              onPress={pickImageFromGallery}
+            >
+              <Ionicons name="images" size={20} color={colors.accent} />
+              <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: '500' }}>Upload</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Camera frame */}
-        {!enrolled && targetUser && (
+        {!enrolled && targetUser && step === 1 && (
           <View style={styles.cameraFrame}>
             {permission.granted ? (
               <>
                 <CameraView
                   ref={cameraRef}
                   style={styles.camera}
-                  facing="front"
+                  facing={cameraFacing}
                 />
+                {/* Camera flip button */}
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10
+                  }}
+                  onPress={toggleCameraFacing}
+                >
+                  <Ionicons name="camera-reverse" size={20} color="#fff" />
+                </TouchableOpacity>
+
                 {/* Overlay */}
                 <View style={styles.cameraOverlay}>
                   <View style={styles.cornerTL} />
@@ -245,11 +301,24 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
         </View>
 
         {/* Action button */}
-        {!enrolled && targetUser && permission.granted && (
+        {!enrolled && targetUser && permission.granted && step === 1 && (
           <TouchableOpacity
-            style={[styles.enrollBtn, (capturing || step > 1) && { opacity: 0.6 }]}
-            onPress={handleCapture}
-            disabled={capturing || step > 1}
+            style={[styles.enrollBtn, capturing && { opacity: 0.6 }]}
+            onPress={async () => {
+              if (!cameraRef.current) return;
+              setCapturing(true);
+              try {
+                const photo = await cameraRef.current.takePictureAsync({
+                  quality: 0.8,
+                  base64: true,
+                });
+                handleEnrollment(photo.base64);
+              } catch (err) {
+                Alert.alert('Capture failed', err.message || 'Could not capture photo.');
+                setCapturing(false);
+              }
+            }}
+            disabled={capturing}
           >
             {capturing
               ? <ActivityIndicator color="#fff" />

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    """Face Microservice Configuration"""
+    """Face Microservice Configuration - BUFFALO_L (Original - High Accuracy)"""
     
     # Flask
     DEBUG = os.getenv('DEBUG', 'False') == 'True'
@@ -12,8 +12,8 @@ class Config:
     HOST = os.getenv('FACE_SERVICE_HOST', '0.0.0.0')
     
     # InsightFace Model
-    ARCFACE_MODEL = os.getenv('ARCFACE_MODEL', 'buffalo_s')  # Options: 'buffalo_l', 'buffalo_m', 'buffalo_s' | Using buffalo_s for Render compatibility
-    ARCFACE_DEVICE = os.getenv('ARCFACE_DEVICE', '-1')  # 0 for GPU, -1 for CPU | Changed to CPU for Render
+    ARCFACE_MODEL = os.getenv('ARCFACE_MODEL', 'buffalo_l')  # HIGH ACCURACY MODEL
+    ARCFACE_DEVICE = os.getenv('ARCFACE_DEVICE', '0')  # 0 for GPU, -1 for CPU
     
     # Embedding settings
     EMBEDDING_DIMENSION = 512
@@ -30,3 +30,8 @@ class Config:
     
     # Logging
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    
+    # MODEL NOTES:
+    # - buffalo_l: 300+ MB, High Accuracy (99%+), Slower (~30-50ms)
+    # - RAM Usage: ~700-1000 MB at runtime
+    # - Best for: High security requirements, GPU available
