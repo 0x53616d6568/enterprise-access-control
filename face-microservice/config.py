@@ -8,7 +8,7 @@ class Config:
     
     # Flask
     DEBUG = os.getenv('DEBUG', 'False') == 'True'
-    PORT = int(os.getenv('FACE_SERVICE_PORT', 5000))
+    PORT = int(os.getenv('PORT', os.getenv('FACE_SERVICE_PORT', 5000)))
     HOST = os.getenv('FACE_SERVICE_HOST', '0.0.0.0')
     
     # InsightFace Model
