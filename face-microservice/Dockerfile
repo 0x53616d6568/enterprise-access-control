@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Install Python dependencies
+# Use environment variable to work around onnxruntime executable stack issues
+ENV ONNXRUNTIME_EXECUTION_MODE=sequential
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
