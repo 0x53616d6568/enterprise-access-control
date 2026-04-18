@@ -112,8 +112,17 @@ const refresh = async (req, res, next) => {
       [decoded.user_id, refreshToken]
     );
 
-    if (!rows.length)
-      return error(res, 'Session not found or expired', 401);
+    // If session not found (backend came back from cold start), recreate it
+    if (!rows.length) {
+      const deviceId = uuidv4();
+      await db.query(
+        `INSERT INTO user_sessions (user_id, device_id, auth_token, is_active)
+         VALUES (?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE auth_token = ?, is_active = 1, last_activity = NOW()`,
+        [decoded.user_id, deviceId, refreshToken, refreshToken]
+      );
+      console.log(`Session recreated for user ${decoded.user_id} after cold start`);
+    }
 
     const newAccessToken = signAccessToken({
       user_id:      decoded.user_id,

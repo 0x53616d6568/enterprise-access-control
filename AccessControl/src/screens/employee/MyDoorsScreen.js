@@ -176,7 +176,7 @@ export default function MyDoorsScreen() {
     try {
       const [doorsRes, rulesRes] = await Promise.all([
         api.get(API.DOORS),
-        api.get(`${API.BASE_URL}/doors/access/my-doors`),
+        api.get('/doors/access/my-doors'),
       ]);
 
       const allDoors = doorsRes.data.data || [];

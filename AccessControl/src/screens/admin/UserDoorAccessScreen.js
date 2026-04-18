@@ -22,6 +22,68 @@ export default function UserDoorAccessScreen({ route, navigation }) {
     title: { color: colors.textPrimary, fontSize: 18, fontWeight: '600', marginBottom: 4 },
     subtitle: { color: colors.textMuted, fontSize: 12 },
     
+    searchSection: { marginBottom: 16 },
+    searchInput: {
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      color: colors.textPrimary,
+      fontSize: 13,
+      marginBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    searchInputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.bg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      marginBottom: 12,
+    },
+    searchInputField: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingLeft: 8,
+      color: colors.textPrimary,
+      fontSize: 13,
+    },
+    filterButtons: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    filterBtn: {
+      flex: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterBtnActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    filterBtnInactive: {
+      backgroundColor: colors.bg,
+      borderColor: colors.border,
+    },
+    filterBtnText: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    filterBtnActiveText: {
+      color: '#fff',
+    },
+    filterBtnInactiveText: {
+      color: colors.textSecondary,
+    },
     userCard: {
       backgroundColor: colors.bgCard,
       borderWidth: 1,
@@ -112,10 +174,25 @@ export default function UserDoorAccessScreen({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOption, setFilterOption] = useState('all'); // all, with-access, without-access
   const [formData, setFormData] = useState({
     from: '00:00',
     until: '23:59',
     days: 'MON,TUE,WED,THU,FRI',
+  });
+
+  // Filter users based on search and filter options
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (filterOption === 'with-access') {
+      return matchesSearch && user.has_access === 1;
+    } else if (filterOption === 'without-access') {
+      return matchesSearch && user.has_access === 0;
+    }
+    return matchesSearch;
   });
 
   const fetchUsers = useCallback(async () => {
@@ -208,7 +285,81 @@ export default function UserDoorAccessScreen({ route, navigation }) {
       >
         <View style={styles.header}>
           <Text style={styles.title}>{doorName || 'Door Access'}</Text>
-          <Text style={styles.subtitle}>{users.length} users</Text>
+          <Text style={styles.subtitle}>{users.length} total users</Text>
+        </View>
+
+        {/* Search and Filter Section */}
+        <View style={styles.searchSection}>
+          {/* Search Input */}
+          <View style={styles.searchInputWrapper}>
+            <Ionicons name="search-outline" size={16} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInputField}
+              placeholder="Search by name or email"
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Filter Buttons */}
+          <View style={styles.filterButtons}>
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterOption === 'all' ? styles.filterBtnActive : styles.filterBtnInactive,
+              ]}
+              onPress={() => setFilterOption('all')}
+            >
+              <Text
+                style={[
+                  styles.filterBtnText,
+                  filterOption === 'all' ? styles.filterBtnActiveText : styles.filterBtnInactiveText,
+                ]}
+              >
+                All ({users.length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterOption === 'with-access' ? styles.filterBtnActive : styles.filterBtnInactive,
+              ]}
+              onPress={() => setFilterOption('with-access')}
+            >
+              <Text
+                style={[
+                  styles.filterBtnText,
+                  filterOption === 'with-access' ? styles.filterBtnActiveText : styles.filterBtnInactiveText,
+                ]}
+              >
+                Has Access ({users.filter(u => u.has_access === 1).length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                filterOption === 'without-access' ? styles.filterBtnActive : styles.filterBtnInactive,
+              ]}
+              onPress={() => setFilterOption('without-access')}
+            >
+              <Text
+                style={[
+                  styles.filterBtnText,
+                  filterOption === 'without-access' ? styles.filterBtnActiveText : styles.filterBtnInactiveText,
+                ]}
+              >
+                No Access ({users.filter(u => u.has_access === 0).length})
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {users.length === 0 ? (
@@ -216,8 +367,13 @@ export default function UserDoorAccessScreen({ route, navigation }) {
             <Ionicons name="people-outline" size={40} color={colors.textMuted} />
             <Text style={{ color: colors.textMuted, marginTop: 10, fontSize: 13 }}>No users found</Text>
           </View>
+        ) : filteredUsers.length === 0 ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+            <Ionicons name="search-outline" size={40} color={colors.textMuted} />
+            <Text style={{ color: colors.textMuted, marginTop: 10, fontSize: 13 }}>No users match your search</Text>
+          </View>
         ) : (
-          users.map((user) => (
+          filteredUsers.map((user) => (
             <View key={user.user_id} style={styles.userCard}>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{user.name}</Text>
