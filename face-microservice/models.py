@@ -20,6 +20,15 @@ class FaceRecognitionModel:
         self.arcface = None
         self.face_database = {}
         self.is_initialized = False
+        # LAZY INIT: Don't load model on startup, wait for first request
+        # This prevents OOM crash on container startup (Render 512 MB limit)
+        logger.info("FaceRecognitionModel created (model init deferred to first request)")
+    
+    def ensure_initialized(self):
+        """Ensure model is initialized before processing requests (call before any operation)"""
+        if self.is_initialized:
+            return
+        logger.info("Initializing model on first request...")
         self._initialize_model()
         self._load_database()
     
@@ -92,8 +101,7 @@ class FaceRecognitionModel:
         Returns:
             Normalized 512-dim embedding or None if no face detected
         """
-        if not self.is_initialized:
-            raise RuntimeError("Model not initialized")
+        self.ensure_initialized()  # Lazy-init on first request
         
         try:
             import base64
