@@ -12,6 +12,7 @@ Architecture:
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
+import gc
 from functools import wraps
 from config import Config
 from models import get_model
@@ -101,7 +102,14 @@ def enroll_face():
         model = get_model()
         
         # Extract embedding from image
-        embedding = model.extract_embedding(image_base64)
+        try:
+            embedding = model.extract_embedding(image_base64)
+        except ValueError as ve:
+            # Handle validation errors (e.g., image too large)
+            return jsonify({
+                'success': False,
+                'error': str(ve)
+            }), 413  # 413 = Payload Too Large
         
         if embedding is None:
             return jsonify({
@@ -117,6 +125,11 @@ def enroll_face():
         import numpy as np
         embedding_bytes = embedding.astype(np.float32).tobytes()
         embedding_base64 = base64.b64encode(embedding_bytes).decode('utf-8')
+        
+        # Clean up memory
+        del embedding
+        del embedding_bytes
+        gc.collect()
         
         return jsonify({
             'success': True,
@@ -175,7 +188,17 @@ def recognize_face():
         model = get_model()
         
         # Recognize face
-        user_id, similarity = model.recognize_face(image_base64)
+        try:
+            user_id, similarity = model.recognize_face(image_base64)
+        except ValueError as ve:
+            # Handle validation errors (e.g., image too large)
+            return jsonify({
+                'success': False,
+                'error': str(ve)
+            }), 413  # 413 = Payload Too Large
+        
+        # Clean up memory
+        gc.collect()
         
         return jsonify({
             'success': True,

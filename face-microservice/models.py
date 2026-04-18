@@ -8,10 +8,16 @@ import insightface
 from insightface.app import FaceAnalysis
 import os
 import logging
+import gc
 from typing import Tuple, Optional
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+# Maximum image size in MB (base64 encoded)
+MAX_IMAGE_SIZE_MB = 30
+# Maximum image dimensions to prevent OOM
+MAX_IMAGE_DIMENSION = 2000
 
 class FaceRecognitionModel:
     """Wrapper for InsightFace ArcFace model using provided code structure"""
@@ -108,24 +114,53 @@ class FaceRecognitionModel:
             from io import BytesIO
             from PIL import Image
             
+            # MEMORY OPTIMIZATION 1: Validate base64 size before decoding
+            # Base64 is ~33% larger than binary, so check before decoding
+            if len(image_base64) > MAX_IMAGE_SIZE_MB * 1024 * 1024 * 1.33:
+                raise ValueError(f"Image too large: max {MAX_IMAGE_SIZE_MB}MB (base64 encoded)")
+            
             # Decode base64 image
             image_data = base64.b64decode(image_base64)
             image = Image.open(BytesIO(image_data))
+            
+            # MEMORY OPTIMIZATION 2: Resize large images to prevent OOM
+            # InsightFace works well with any size, but smaller = less memory
+            width, height = image.size
+            if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+                # Calculate scale to fit within MAX_IMAGE_DIMENSION
+                scale = MAX_IMAGE_DIMENSION / max(width, height)
+                new_width = int(width * scale)
+                new_height = int(height * scale)
+                logger.info(f"Resizing image from {width}x{height} to {new_width}x{new_height}")
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Convert to numpy array for face detection
             frame = np.array(image)
             
-            # Detect faces on full frame (from your code)
+            # Detect faces on frame (from your code)
             faces = self.arcface.get(frame)
             
             if not faces:
+                # MEMORY OPTIMIZATION 3: Clean up large arrays
+                del frame
+                del image
+                gc.collect()
                 return None
             
             # Get embedding from first face (from your enroll_face1.py)
             embedding = faces[0].embedding
             embedding = embedding / np.linalg.norm(embedding)  # normalize (your code)
             
+            # MEMORY OPTIMIZATION 4: Clean up after extracting embedding
+            del frame
+            del image
+            del faces
+            gc.collect()
+            
             return embedding.astype(np.float32)
         except Exception as e:
             logger.error(f"Error extracting embedding: {str(e)}")
+            gc.collect()  # Clean up on error too
             raise
     
     def save_embedding(self, user_id: int, embedding: np.ndarray):
@@ -196,9 +231,14 @@ class FaceRecognitionModel:
                             best_score = score
                             best_match = user_id
             
+            # Clean up embedding
+            del embedding
+            gc.collect()
+            
             return best_match, float(best_score)
         except Exception as e:
             logger.error(f"Error recognizing face: {str(e)}")
+            gc.collect()
             raise
     
     @staticmethod
