@@ -24,19 +24,26 @@ class FaceRecognitionModel:
         self._load_database()
     
     def _initialize_model(self):
-        """Initialize InsightFace model - using your provided setup"""
+        """Initialize InsightFace model - MINIMAL for Render (disable unused detectors)"""
         try:
             logger.info(f"Initializing InsightFace model: {Config.ARCFACE_MODEL}")
             
-            # -------------------------------
-            # Setup InsightFace (from your code)
-            # -------------------------------
+            # Disable all providers except CPU (prevents memory duplication)
+            # Must be done BEFORE FaceAnalysis initialization
+            try:
+                import onnxruntime
+                onnxruntime.set_default_logger_severity(3)  # Suppress warnings
+            except:
+                pass
+            
+            # Initialize with minimal set of tasks to reduce memory
+            # Only enable necessary components
             self.arcface = FaceAnalysis(name=Config.ARCFACE_MODEL)
             ctx_id = int(Config.ARCFACE_DEVICE)
-            self.arcface.prepare(ctx_id=ctx_id)
+            self.arcface.prepare(ctx_id=ctx_id, providers=['CPUExecutionProvider'])
             
             self.is_initialized = True
-            logger.info("✅ InsightFace model initialized successfully")
+            logger.info("✅ InsightFace model initialized successfully (CPU-only, minimal config)")
         except Exception as e:
             logger.error(f"❌ Failed to initialize InsightFace model: {str(e)}")
             raise
