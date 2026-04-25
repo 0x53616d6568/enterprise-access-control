@@ -14,7 +14,7 @@ import VisitorsScreen       from '../screens/employee/VisitorsScreen';
 // Shared Screens
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import AllLogsScreen       from '../screens/shared/AllLogsScreen';
-import BLETokenScreen      from '../screens/shared/BLETokenScreen';
+import MQTTTokenScreen     from '../screens/shared/MQTTTokenScreen';
 import AppearanceScreen    from '../screens/shared/AppearanceScreen';
 import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
 
@@ -33,7 +33,7 @@ const HomeStack = () => (
 const ProfileStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="ProfileMain"   component={ProfileScreen} />
-    <Stack.Screen name="BLEToken"      component={BLETokenScreen} />
+    <Stack.Screen name="MQTTToken"     component={MQTTTokenScreen} />
     <Stack.Screen name="Appearance"    component={AppearanceScreen} />
     <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
   </Stack.Navigator>
