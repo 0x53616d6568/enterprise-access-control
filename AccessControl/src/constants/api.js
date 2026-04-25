@@ -1,11 +1,10 @@
-// Change this to your machine's local IP when testing on a physical device
-// To find it: run "ipconfig" in PowerShell and look for IPv4 Address
-// e.g. 192.168.1.10
-// LOCAL DEV (COMMENTED OUT):
-// const BASE_URL = 'http://10.120.137.125:3000/api';
-
 // PRODUCTION - Render deployment
 const BASE_URL = 'https://enterprise-access-control.onrender.com/api';
+
+// LOCAL DEV (COMMENTED OUT - for testing only):
+// To use localhost, change your machine's IP:
+// Run: ipconfig (PowerShell) and get IPv4 Address
+// Example: const BASE_URL = 'http://10.120.137.125:3000/api';
 
 export const API = {
   BASE_URL,
@@ -61,13 +60,38 @@ export const API = {
   BLE_TOKEN:       `${BASE_URL}/auth/ble-token`,
   BLE_TOKEN_ROTATE: `${BASE_URL}/auth/ble-token/rotate`,
 
-  // Face Recognition
+  // MQTT Token Management
+  MQTT_TOKEN_GENERATE: `${BASE_URL}/mqtt/token/generate`,
+  MQTT_TOKENS:     `${BASE_URL}/mqtt/tokens`,
+  MQTT_TOKEN:      `${BASE_URL}/mqtt/token`,
+  MQTT_TOKENS_REVOKE_ALL: `${BASE_URL}/mqtt/tokens/revoke-all`,
+
+  // MQTT Door Access Requests (Prompted behavior)
+  MQTT_REQUEST_ACCESS: `${BASE_URL}/mqtt/request-access`,
+  MQTT_REQUEST:    `${BASE_URL}/mqtt/request`,
+  MQTT_REQUEST_HISTORY: `${BASE_URL}/mqtt/request-history`,
+
+  // Face Recognition (via Backend)
   FACE_ENROLL:     `${BASE_URL}/face/enroll`,
   FACE_RECOGNIZE:  `${BASE_URL}/face/recognize`,
   FACE_GET:        (id) => `${BASE_URL}/face/${id}`,
   FACE_STATUS:     (id) => `${BASE_URL}/face/status/${id}`,
   FACE_DELETE:     (id) => `${BASE_URL}/face/${id}`,
   FACE_BATCH:      `${BASE_URL}/face/batch`,
+
+  // Face Recognition Microservice (HuggingFace Spaces - Production)
+  FACE_MICROSERVICE_BASE: 'https://Soapppp11-enterprise-access-control-face.hf.space',
+  FACE_MICROSERVICE_API_KEY: 'sk-face-xyz123',
+  FACE_MICROSERVICE_ENROLL: 'https://Soapppp11-enterprise-access-control-face.hf.space/enroll',
+  FACE_MICROSERVICE_RECOGNIZE: 'https://Soapppp11-enterprise-access-control-face.hf.space/recognize',
+  FACE_MICROSERVICE_HEALTH: 'https://Soapppp11-enterprise-access-control-face.hf.space/health',
+
+  // Face Recognition Microservice (Local Testing)
+  // Uncomment to use localhost instead of HF Spaces
+  // FACE_MICROSERVICE_BASE: 'http://localhost:5000',
+  // FACE_MICROSERVICE_ENROLL: 'http://localhost:5000/enroll',
+  // FACE_MICROSERVICE_RECOGNIZE: 'http://localhost:5000/recognize',
+  // FACE_MICROSERVICE_HEALTH: 'http://localhost:5000/health',
 };
 
 export default API;

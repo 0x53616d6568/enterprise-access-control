@@ -115,7 +115,7 @@ export const AuthProvider = ({ children }) => {
       const sessionTimeout = setTimeout(() => {
         console.log('⏱️ Session restore timeout, proceeding without session');
         setIsLoading(false);
-      }, 5000); // Reduced to 5 seconds
+      }, 15000); // Increased to 15 seconds for Render free tier startup
 
       try {
         const [token, storedUser] = await Promise.all([
@@ -133,7 +133,13 @@ export const AuthProvider = ({ children }) => {
           // Check if token is expiring soon and refresh if needed
           if (isTokenExpiringSoon(token)) {
             console.log('🔄 Token expiring soon, refreshing...');
-            await performTokenRefresh();
+            try {
+              await performTokenRefresh();
+            } catch (refreshErr) {
+              console.log('⚠️ Token refresh failed during restore, will use existing token:', refreshErr.message);
+              // Continue with existing token - will refresh again later when needed
+              scheduleTokenRefresh(token);
+            }
           } else {
             // Schedule next refresh
             scheduleTokenRefresh(token);

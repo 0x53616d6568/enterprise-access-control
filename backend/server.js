@@ -15,6 +15,7 @@ const piRoutes           = require('./routes/pi.routes');
 const preferencesRoutes  = require('./routes/preferences.routes');
 const adminRoutes        = require('./routes/admin.routes');
 const faceRoutes         = require('./routes/face.routes');
+const mqttRoutes         = require('./routes/mqtt.routes');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/pi',            piRoutes);
 app.use('/api/preferences',   preferencesRoutes);
 app.use('/api/admin',         adminRoutes);  // Admin endpoints for token management
 app.use('/api/face',          faceRoutes);   // Face recognition endpoints
+app.use('/api/mqtt',          mqttRoutes);   // MQTT-based door access endpoints
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (req, res) => {

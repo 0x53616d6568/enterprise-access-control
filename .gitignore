@@ -2,8 +2,9 @@
 node_modules/
 .expo/
 
-# Environment variables - NEVER commit these
-backend/.env
+# Environment variables - NEVER commit these (except EXAMPLE.env)
+.env*
+!EXAMPLE.env
 
 # Build outputs
 dist/

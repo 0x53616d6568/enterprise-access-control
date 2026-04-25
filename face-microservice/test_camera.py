@@ -19,8 +19,11 @@ from insightface.app import FaceAnalysis
 
 FACE_DB_PATH = './face_database'
 THRESHOLD = 0.6
-ARCFACE_MODEL = 'buffalo_l'
+ARCFACE_MODEL = 'buffalo_s'  # Must match microservice model (buffalo_s for HF Spaces)
 ARCFACE_DEVICE = -1  # -1 for CPU, 0 for GPU
+
+# Debug mode - shows all similarity scores
+DEBUG_MODE = True
 
 # ────────────────────────────────────────────────────────────
 # Initialize Model
@@ -35,29 +38,56 @@ print("✅ Model initialized")
 os.makedirs(FACE_DB_PATH, exist_ok=True)
 
 # ────────────────────────────────────────────────────────────
+# Database Helper Functions
+# ────────────────────────────────────────────────────────────
+
+# ────────────────────────────────────────────────────────────
 # Helper Functions
 # ────────────────────────────────────────────────────────────
 
 def load_database():
-    """Load all face embeddings from database
+    """Load all face embeddings from .npy files
     Each user can have multiple embeddings (as a 2D array)
     Returns: {user_id: embeddings_array} where embeddings_array is (N, 512)
     """
     database = {}
     if os.path.exists(FACE_DB_PATH) and os.listdir(FACE_DB_PATH):
-        for file in os.listdir(FACE_DB_PATH):
-            if file.endswith('.npy'):
-                user_id = int(file[:-4])
-                embeddings = np.load(os.path.join(FACE_DB_PATH, file))  # (N, 512)
-                # Ensure 2D array (handle old single embedding files)
-                if embeddings.ndim == 1:
-                    embeddings = embeddings.reshape(1, -1)
-                # Normalize all embeddings
-                embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-                database[user_id] = embeddings
-        print(f"✅ Loaded {len(database)} users from database")
+        npy_files = [f for f in os.listdir(FACE_DB_PATH) if f.endswith('.npy')]
+        print(f"\n📂 Found {len(npy_files)} .npy file(s) in {FACE_DB_PATH}")
+        
+        for file in npy_files:
+            user_id = int(file[:-4])
+            file_path = os.path.join(FACE_DB_PATH, file)
+            embeddings = np.load(file_path)  # Load the embedding
+            
+            print(f"\n📦 User {user_id}:")
+            print(f"   File: {file}")
+            print(f"   Loaded shape: {embeddings.shape}")
+            print(f"   Loaded dtype: {embeddings.dtype}")
+            
+            # Ensure 2D array (handle single embedding files)
+            if embeddings.ndim == 1:
+                embeddings = embeddings.reshape(1, -1)
+                print(f"   Reshaped to: {embeddings.shape}")
+            
+            # Check values
+            print(f"   Min/Max: {np.min(embeddings):.6f} / {np.max(embeddings):.6f}")
+            print(f"   Norm before normalization: {np.linalg.norm(embeddings[0]):.6f}")
+            
+            # Normalize all embeddings (row-wise normalization)
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            embeddings = embeddings / norms
+            
+            print(f"   Norm after normalization: {np.linalg.norm(embeddings[0]):.6f}")
+            print(f"   First 5 values: {embeddings[0][:5]}")
+            
+            database[user_id] = embeddings
+        
+        total = sum(emb.shape[0] for emb in database.values())
+        print(f"\n✅ Loaded {len(database)} users with {total} total embeddings")
     else:
-        print("ℹ️  Database is empty")
+        print(f"ℹ️  No .npy files found in {FACE_DB_PATH}")
+    
     return database
 
 def cosine_similarity(a, b):
@@ -296,18 +326,42 @@ def recognize_mode():
         for face in faces:
             x1, y1, x2, y2 = map(int, face.bbox)
             embedding = face.embedding
-            embedding = embedding / np.linalg.norm(embedding)
+            embedding_norm = np.linalg.norm(embedding)
+            embedding = embedding / embedding_norm
             
             # Find best match across all embeddings for all users
             best_score = 0
             best_match = None
+            
+            if DEBUG_MODE:
+                print(f"\n🔍 DEBUG - Analyzing face:")
+                print(f"   Camera embedding shape: {embedding.shape}")
+                print(f"   Camera embedding norm (before norm): {embedding_norm:.6f}")
+                print(f"   Camera embedding norm (after norm): {np.linalg.norm(embedding):.6f}")
+                print(f"   Camera embedding first 5: {embedding[:5]}")
+                print(f"   Database has {len(database)} users")
+            
             for user_id_db, db_embeddings in database.items():
                 # db_embeddings is (N, 512) - check against all embeddings for this user
-                for db_emb in db_embeddings:
+                for idx, db_emb in enumerate(db_embeddings):
+                    # Verify the db embedding is normalized
+                    db_norm = np.linalg.norm(db_emb)
+                    if db_norm < 0.99 or db_norm > 1.01:
+                        print(f"   ⚠️  User {user_id_db} embedding #{idx} has norm {db_norm:.6f} (expected ~1.0)")
+                    
                     score = cosine_similarity(embedding, db_emb)
+                    
+                    if DEBUG_MODE:
+                        print(f"   User {user_id_db} embedding #{idx}: score = {score:.6f} (norm={db_norm:.6f})")
+                    
                     if score > best_score:
                         best_score = score
                         best_match = user_id_db
+            
+            if DEBUG_MODE:
+                print(f"   ➡️  Best match: User {best_match} with score {best_score:.6f}")
+                print(f"   Threshold: {THRESHOLD}")
+                print()
             
             # Determine if authorized
             if best_score >= THRESHOLD:
