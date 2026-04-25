@@ -1,0 +1,243 @@
+/**
+ * ESP-32 Door Access Controller
+ * 
+ * Captures image from camera -> Sends to HuggingFace Spaces Face Recognition -> 
+ * Gets verification result -> Controls door lock relay
+ * 
+ * Hardware:
+ * - ESP-32-CAM (OV2640 camera)
+ * - Relay module for door lock (GPIO 12)
+ * - Push button for manual trigger (GPIO 13)
+ * - LED status indicator (GPIO 4)
+ */
+
+#include "esp_camera.h"
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include "config.h"
+#include "camera_utils.h"
+#include "network_utils.h"
+#include "door_control.h"
+
+// Pin definitions
+#define RELAY_PIN 12           // Door lock relay
+#define BUTTON_PIN 13          // Manual trigger button
+#define LED_PIN 4              // Status LED
+#define FLASH_LED_PIN 4        // Built-in LED for flash
+
+// Global state
+volatile bool triggerAccess = false;
+unsigned long lastButtonPress = 0;
+const unsigned long DEBOUNCE_TIME = 500;
+
+// Face recognition response structure
+struct FaceResponse {
+  bool success;
+  bool faceDetected;
+  float confidence;
+  String userId;
+  String message;
+};
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  
+  Serial.println("\n\n=== ESP-32 Door Access Controller ===");
+  Serial.println("Initializing...");
+  
+  // Initialize pins
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  
+  // Set relay to locked (HIGH = locked)
+  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(LED_PIN, LOW);
+  
+  // Attach button interrupt
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), buttonISR, FALLING);
+  
+  // Initialize camera
+  if (!initializeCamera()) {
+    Serial.println("FATAL: Camera initialization failed!");
+    while (1) {
+      digitalWrite(LED_PIN, HIGH);
+      delay(100);
+      digitalWrite(LED_PIN, LOW);
+      delay(100);
+    }
+  }
+  
+  // Connect to WiFi
+  if (!connectToWiFi(WIFI_SSID, WIFI_PASSWORD)) {
+    Serial.println("FATAL: WiFi connection failed!");
+    while (1) {
+      digitalWrite(LED_PIN, HIGH);
+      delay(200);
+      digitalWrite(LED_PIN, LOW);
+      delay(200);
+    }
+  }
+  
+  Serial.println("Setup complete!");
+  blinkLED(3, 200); // 3 quick blinks = ready
+}
+
+void loop() {
+  // Handle access request
+  if (triggerAccess) {
+    triggerAccess = false;
+    handleAccessRequest();
+  }
+  
+  delay(100);
+}
+
+/**
+ * ISR for button press
+ */
+void IRAM_ATTR buttonISR() {
+  unsigned long currentTime = millis();
+  if (currentTime - lastButtonPress > DEBOUNCE_TIME) {
+    triggerAccess = true;
+    lastButtonPress = currentTime;
+  }
+}
+
+/**
+ * Main access request handler
+ * 1. Capture image
+ * 2. Send to face recognition API
+ * 3. Process response
+ * 4. Control door lock
+ */
+void handleAccessRequest() {
+  Serial.println("\n--- Access Request Triggered ---");
+  digitalWrite(LED_PIN, HIGH); // Turn on LED during processing
+  
+  // Capture image
+  Serial.println("Capturing image...");
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("ERROR: Failed to capture image");
+    blinkLED(5, 100); // 5 fast blinks = error
+    digitalWrite(LED_PIN, LOW);
+    return;
+  }
+  
+  Serial.printf("Image captured: %d bytes\n", fb->len);
+  
+  // Send to face recognition API
+  Serial.println("Sending to face recognition service...");
+  FaceResponse response = sendToFaceRecognition(fb->buf, fb->len);
+  
+  // Free camera buffer
+  esp_camera_fb_return(fb);
+  
+  // Process response
+  Serial.println("\n--- Response Received ---");
+  Serial.printf("Success: %s\n", response.success ? "true" : "false");
+  Serial.printf("Face Detected: %s\n", response.faceDetected ? "true" : "false");
+  Serial.printf("Confidence: %.2f%%\n", response.confidence * 100);
+  Serial.printf("User ID: %s\n", response.userId.c_str());
+  Serial.printf("Message: %s\n", response.message.c_str());
+  
+  // Control door based on response
+  if (response.success && response.faceDetected && response.confidence >= CONFIDENCE_THRESHOLD) {
+    Serial.println("\n✓ ACCESS GRANTED");
+    unlockDoor();
+    blinkLED(3, 300); // 3 slow blinks = granted
+  } else {
+    Serial.println("\n✗ ACCESS DENIED");
+    blinkLED(10, 100); // 10 fast blinks = denied
+  }
+  
+  digitalWrite(LED_PIN, LOW); // Turn off LED when done
+}
+
+/**
+ * Send image to HuggingFace Spaces face recognition service
+ */
+FaceResponse sendToFaceRecognition(uint8_t *imageData, size_t imageSize) {
+  FaceResponse response = {false, false, 0.0, "", "Failed"};
+  
+  HTTPClient http;
+  WiFiClientSecure client;
+  
+  // Allow insecure HTTPS if needed (for testing)
+  client.setInsecure();
+  
+  // Prepare request
+  String url = String(FACE_SERVICE_URL) + "/predict";
+  Serial.printf("Connecting to: %s\n", url.c_str());
+  
+  if (!http.begin(client, url)) {
+    Serial.println("ERROR: Failed to connect to face service");
+    return response;
+  }
+  
+  // Set headers
+  http.addHeader("Content-Type", "image/jpeg");
+  
+  // Add API key if required
+  if (strlen(FACE_SERVICE_API_KEY) > 0) {
+    http.addHeader("Authorization", String("Bearer ") + FACE_SERVICE_API_KEY);
+  }
+  
+  // Send request with image data
+  int httpCode = http.sendRequest("POST", imageData, imageSize);
+  
+  if (httpCode != 200) {
+    Serial.printf("ERROR: HTTP %d response\n", httpCode);
+    http.end();
+    return response;
+  }
+  
+  // Parse JSON response
+  String jsonResponse = http.getString();
+  Serial.printf("Response: %s\n", jsonResponse.c_str());
+  
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, jsonResponse);
+  
+  if (error) {
+    Serial.printf("JSON parsing error: %s\n", error.c_str());
+    http.end();
+    return response;
+  }
+  
+  // Extract response fields
+  response.success = doc["success"] | false;
+  response.faceDetected = doc["face_detected"] | false;
+  response.confidence = doc["confidence"] | 0.0;
+  response.userId = doc["user_id"] | "";
+  response.message = doc["message"] | "Unknown response";
+  
+  http.end();
+  return response;
+}
+
+/**
+ * Unlock door - energize relay for UNLOCK_DURATION
+ */
+void unlockDoor() {
+  Serial.println("Unlocking door...");
+  digitalWrite(RELAY_PIN, LOW); // LOW = unlocked (relay pulls in)
+  delay(UNLOCK_DURATION);
+  digitalWrite(RELAY_PIN, HIGH); // HIGH = locked (relay releases)
+  Serial.println("Door locked");
+}
+
+/**
+ * Blink LED for status indication
+ */
+void blinkLED(int count, int delayMs) {
+  for (int i = 0; i < count; i++) {
+    digitalWrite(LED_PIN, HIGH);
+    delay(delayMs);
+    digitalWrite(LED_PIN, LOW);
+    delay(delayMs);
+  }
+}
