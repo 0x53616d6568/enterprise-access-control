@@ -18,7 +18,7 @@ import ManagerTabs from './ManagerTabs';
 import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import NotificationSettingsScreen from '../screens/shared/NotificationSettingsScreen';
 import AppearanceScreen from '../screens/shared/AppearanceScreen';
-import BLETokenScreen from '../screens/shared/BLETokenScreen';
+import MQTTTokenScreen from '../screens/shared/MQTTTokenScreen';
 import HelpCenterScreen from '../screens/shared/HelpCenterScreen';
 
 const Stack = createNativeStackNavigator();
@@ -125,11 +125,11 @@ export default function AppNavigator() {
           />
 
           <Stack.Screen 
-            name="BLEToken" 
-            component={BLETokenScreen} 
+            name="MQTTToken" 
+            component={MQTTTokenScreen} 
             options={{ 
               headerShown: true, 
-              title: 'Security Token' 
+              title: 'MQTT Tokens' 
             }} 
           />
 

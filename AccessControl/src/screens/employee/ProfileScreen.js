@@ -73,12 +73,12 @@ export default function ProfileScreen({ navigation }) {
       items: [
         { 
           key: 'security', 
-          label: 'Security & BLE token', 
-          icon: 'shield-checkmark-outline', 
+          label: 'MQTT Tokens', 
+          icon: 'key-outline', 
           color: colors.accentText, 
           bg: colors.bgDeep, 
           border: colors.accentDark, 
-          onPress: () => navigation.navigate('BLEToken') 
+          onPress: () => navigation.navigate('MQTTToken') 
         },
         { 
           key: 'password', 
