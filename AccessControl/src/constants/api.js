@@ -1,5 +1,6 @@
-// PRODUCTION - Render deployment
-const BASE_URL = 'https://enterprise-access-control.onrender.com/api';
+// MQTT Testing Render Deployment
+// Deployed mqtt-testing branch with MQTT token system
+const BASE_URL = 'https://enterprise-access-control-mqtt.onrender.com/api';
 
 // LOCAL DEV (COMMENTED OUT - for testing only):
 // To use localhost, change your machine's IP:
