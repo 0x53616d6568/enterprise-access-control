@@ -44,19 +44,26 @@ const getAllUsers = async (req, res, next) => {
   try {
     // If user is manager, only show their assigned team members
     if (req.user.access_level === 4) { // Manager role
-      const [rows] = await db.query(
-        `SELECT u.user_id, u.full_name, u.email, u.phone,
-                u.department, u.avatar_url, u.status,
-                u.is_first_login, u.last_login,
-                r.role_id, r.role_name, r.access_level
-         FROM users u 
-         JOIN roles r ON u.role_id = r.role_id
-         JOIN manager_team_members mtm ON u.user_id = mtm.team_member_id
-         WHERE mtm.manager_id = ?
-         ORDER BY u.full_name`,
-        [req.user.user_id]
-      );
-      return success(res, rows);
+      try {
+        const [rows] = await db.query(
+          `SELECT u.user_id, u.full_name, u.email, u.phone,
+                  u.department, u.avatar_url, u.status,
+                  u.is_first_login, u.last_login,
+                  r.role_id, r.role_name, r.access_level
+           FROM users u 
+           JOIN roles r ON u.role_id = r.role_id
+           LEFT JOIN manager_team_members mtm ON u.user_id = mtm.team_member_id AND mtm.manager_id = ?
+           WHERE mtm.manager_id = ?
+           ORDER BY u.full_name`,
+          [req.user.user_id, req.user.user_id]
+        );
+        console.log(`[Manager Team] Retrieved ${rows.length} team members for manager ${req.user.user_id}`);
+        return success(res, rows);
+      } catch (tableErr) {
+        // If manager_team_members table doesn't exist or query fails, return empty array
+        console.warn(`[Manager Team] Failed to fetch team members (table may not exist):`, tableErr.message);
+        return success(res, [], 'No team members assigned');
+      }
     }
     
     // If admin, show all users

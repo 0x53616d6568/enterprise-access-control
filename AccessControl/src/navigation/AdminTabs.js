@@ -9,6 +9,7 @@ import DashboardScreen      from '../screens/employee/DashboardScreen';
 import UsersScreen          from '../screens/admin/UsersScreen';
 import AddUserScreen         from '../screens/admin/AddUserScreen';
 import EditUserScreen        from '../screens/admin/EditUserScreen';
+import ManagerTeamAssignmentScreen from '../screens/admin/ManagerTeamAssignmentScreen';
 import DoorsScreen           from '../screens/admin/DoorsScreen';
 import AddDoorScreen         from '../screens/admin/AddDoorScreen';
 import EditDoorScreen        from '../screens/admin/EditDoorScreen';
@@ -29,6 +30,7 @@ const UsersStack = () => (
     <Stack.Screen name="AddUser"         component={AddUserScreen} />
     <Stack.Screen name="EditUser"        component={EditUserScreen} />
     <Stack.Screen name="FaceEnrollment" component={FaceEnrollmentScreen} />
+    <Stack.Screen name="ManagerTeams"   component={ManagerTeamAssignmentScreen} />
   </Stack.Navigator>
 );
 

@@ -100,13 +100,22 @@ export default function UsersScreen({ navigation }) {
             <Text style={styles.title}>Users</Text>
             <Text style={styles.subtitle}>{users.length} total · {users.filter(u => u.status === 'ACTIVE').length} active</Text>
           </View>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => navigation.navigate('AddUser')}
-          >
-            <Ionicons name="add" size={14} color="#fff" />
-            <Text style={styles.addBtnText}>Add user</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'column', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => navigation.navigate('AddUser')}
+            >
+              <Ionicons name="add" size={14} color="#fff" />
+              <Text style={styles.addBtnText}>Add user</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: colors.accentDark }]}
+              onPress={() => navigation.navigate('ManagerTeams')}
+            >
+              <Ionicons name="people" size={14} color="#fff" />
+              <Text style={styles.addBtnText}>Team Assign</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search */}
