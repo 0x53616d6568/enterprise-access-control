@@ -61,7 +61,7 @@ const EmployeeTabs = () => {
           const icons = {
             Home:       'home-outline',
             Attendance: 'calendar-outline',
-            MyDoors:    'lock-closed-outline',
+            Doors:      'lock-closed-outline',
             Requests:   'document-text-outline',
             Profile:    'person-outline',
           };
@@ -71,7 +71,7 @@ const EmployeeTabs = () => {
     >
       <Tab.Screen name="Home"       component={HomeStack} />
       <Tab.Screen name="Attendance" component={AttendanceScreen} />
-      <Tab.Screen name="MyDoors"    component={MyDoorsScreen} />
+      <Tab.Screen name="Doors"     component={MyDoorsScreen} />
       <Tab.Screen name="Requests"   component={RequestsScreen} />
       <Tab.Screen name="Profile"    component={ProfileStack} />
     </Tab.Navigator>

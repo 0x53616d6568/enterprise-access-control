@@ -58,12 +58,16 @@ export default function DashboardScreen({ navigation }) {
     quickAccessIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     quickAccessText: { fontSize: 12, fontWeight: '500', textAlign: 'center' },
     doorRequestCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginBottom: 12 },
-    doorRequestHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    doorRequestHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, justifyContent: 'space-between' },
     doorRequestName: { flex: 1, color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
     doorAccessLevel: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.accentBg },
     doorAccessLevelText: { fontSize: 10, fontWeight: '600', color: colors.accent },
-    requestAccessBtn: { backgroundColor: colors.accent, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' },
+    requestAccessBtn: { backgroundColor: colors.accent, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     requestAccessBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+    availabilityRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.bgCard },
+    availabilityItem: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
+    availabilityLabel: { color: colors.textMuted, fontSize: 10 },
+    availabilityValue: { color: colors.textPrimary, fontSize: 10, fontWeight: '500' },
     requestAccessBtnDisabled: { backgroundColor: colors.textMuted, opacity: 0.5 },
   });
 
@@ -221,8 +225,8 @@ export default function DashboardScreen({ navigation }) {
         <View style={styles.quickAccessContainer}>
           <View style={styles.rowBC}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="folder-open" size={14} color={colors.textSecondary} />
-              <Text style={styles.sectionTitle}>Assigned Doors</Text>
+              <Ionicons name="lock-closed" size={14} color={colors.textSecondary} />
+              <Text style={styles.sectionTitle}>Doors</Text>
             </View>
             {data.tokens.length > 0 && (
               <TouchableOpacity onPress={() => showAlert('Active Tokens', `You have ${data.tokens.length} active token${data.tokens.length !== 1 ? 's' : ''} for door access requests`, 'info')}>
@@ -250,28 +254,35 @@ export default function DashboardScreen({ navigation }) {
                           {door.security_level || 'Standard'}
                         </Text>
                       </View>
-                    </View>
-
-                    <TouchableOpacity 
-                      style={[
-                        styles.requestAccessBtn,
-                        requestingDoorId === (door.door_id || door.id) && { opacity: 0.7 }
-                      ]}
-                      onPress={() => handleRequestAccess(door)}
-                      disabled={requestingDoorId === (door.door_id || door.id)}
-                    >
-                      {requestingDoorId === (door.door_id || door.id) ? (
-                        <>
+                      <TouchableOpacity 
+                        style={[
+                          styles.requestAccessBtn,
+                          requestingDoorId === (door.door_id || door.id) && { opacity: 0.7 }
+                        ]}
+                        onPress={() => handleRequestAccess(door)}
+                        disabled={requestingDoorId === (door.door_id || door.id)}
+                      >
+                        {requestingDoorId === (door.door_id || door.id) ? (
                           <ActivityIndicator color="#fff" size="small" />
-                          <Text style={styles.requestAccessBtnText}>Requesting...</Text>
-                        </>
-                      ) : (
-                        <>
+                        ) : (
                           <Ionicons name="lock-open" size={14} color="#fff" />
-                          <Text style={styles.requestAccessBtnText}>Request Access</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* Availability Details */}
+                    <View style={styles.availabilityRow}>
+                      <View style={styles.availabilityItem}>
+                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                        <Text style={styles.availabilityLabel}>{door.available_from || '00:00'} - {door.available_to || '23:59'}</Text>
+                      </View>
+                      <View style={styles.availabilityItem}>
+                        <Ionicons name="checkmark-circle" size={12} color={door.is_available ? colors.success : colors.danger} />
+                        <Text style={[styles.availabilityLabel, { color: door.is_available ? colors.success : colors.danger }]}>
+                          {door.is_available ? 'Available' : 'Unavailable'}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 );
               })}

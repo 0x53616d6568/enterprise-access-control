@@ -64,7 +64,7 @@ const ManagerTabs = () => {
             Home:       'home-outline',
             Attendance: 'calendar-outline',
             Team:       'people-outline',
-            Doors:      'door-open-outline',
+            Doors:      'lock-closed-outline',
             Requests:   'document-text-outline',
             Profile:    'person-outline',
           };
