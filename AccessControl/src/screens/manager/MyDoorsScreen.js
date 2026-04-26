@@ -14,51 +14,15 @@ export default function MyDoorsScreen({ navigation }) {
 
   const fetchManagerDoors = useCallback(async () => {
     try {
-      // Get team members
-      const teamRes = await api.get(`${API.BASE_URL}/users`);
-      const teamMembers = teamRes.data.data || [];
+      // For now, just get all doors available in the system
+      // In a full implementation, we would filter by team member access
+      const doorsRes = await api.get(API.DOORS);
+      const allDoors = doorsRes.data.data || [];
       
-      if (teamMembers.length === 0) {
-        setDoors([]);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      // Get all doors assigned to team members
-      const doorsMap = new Map();
-      
-      for (const member of teamMembers) {
-        try {
-          const memberDoorsRes = await api.get(
-            `${API.BASE_URL}/doors/user/${member.user_id}`,
-            {
-              headers: { 'X-Manager-View': 'true' }
-            }
-          );
-          
-          const memberDoors = memberDoorsRes.data.data || [];
-          for (const door of memberDoors) {
-            const key = door.door_id || door.id;
-            if (!doorsMap.has(key)) {
-              doorsMap.set(key, {
-                ...door,
-                assignedTo: [member.full_name]
-              });
-            } else {
-              const existing = doorsMap.get(key);
-              existing.assignedTo.push(member.full_name);
-              doorsMap.set(key, existing);
-            }
-          }
-        } catch (err) {
-          console.warn(`Failed to fetch doors for member ${member.user_id}:`, err.message);
-        }
-      }
-
-      setDoors(Array.from(doorsMap.values()));
+      console.log(`[MyDoors] Loaded ${allDoors.length} doors`);
+      setDoors(allDoors);
     } catch (err) {
-      console.error('Failed to fetch manager doors:', err.message);
+      console.error('Failed to fetch doors:', err.message);
       setDoors([]);
     } finally {
       setLoading(false);
