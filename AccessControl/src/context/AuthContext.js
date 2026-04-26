@@ -112,17 +112,26 @@ export const AuthProvider = ({ children }) => {
   // Restore session on app start
   useEffect(() => {
     const restoreSession = async () => {
-      const sessionTimeout = setTimeout(() => {
-        console.log('⏱️ Session restore timeout, proceeding without session');
-        setIsLoading(false);
-      }, 15000); // Increased to 15 seconds for Render free tier startup
-
       try {
-        const [token, storedUser] = await Promise.all([
+        // Create promises with timeout protection
+        const getAccessTokenWithTimeout = Promise.race([
           getAccessToken(),
-          getStoredUser(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('getAccessToken timeout')), 5000)
+          )
         ]);
-        clearTimeout(sessionTimeout);
+
+        const getStoredUserWithTimeout = Promise.race([
+          getStoredUser(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('getStoredUser timeout')), 5000)
+          )
+        ]);
+
+        const [token, storedUser] = await Promise.all([
+          getAccessTokenWithTimeout,
+          getStoredUserWithTimeout,
+        ]);
 
         if (token && storedUser) {
           console.log('✅ Session restored from storage');
@@ -173,7 +182,6 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.log('Session restore error:', err.message);
-        clearTimeout(sessionTimeout);
       } finally {
         setIsLoading(false);
       }

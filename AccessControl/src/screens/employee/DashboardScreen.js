@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
@@ -78,6 +79,7 @@ export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [requestingDoorId, setRequestingDoorId] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -92,12 +94,8 @@ export default function DashboardScreen({ navigation }) {
       
       let doors = d.data.data || [];
       
-      // Debug log to help identify issues
-      console.log('Assigned Doors API Response:', { statusCode: d.status, data: doors, fullResponse: d });
-      
       // Ensure doors array is properly formatted
       if (!Array.isArray(doors)) {
-        console.warn('Doors is not an array:', typeof doors, doors);
         doors = [];
       }
       
@@ -119,95 +117,31 @@ export default function DashboardScreen({ navigation }) {
     }
   }, []);
 
-  /**
-   * Request access to a specific door
-   * Uses MQTT token to broadcast request to nearest door
-   */
-  const handleRequestAccess = async (door) => {
-    // Check access level
-    if (!user) {
-      showAlert('Error', 'User not authenticated', 'error');
-      return;
-    }
-
-    // Check if user has active tokens
-    if (!data.tokens || data.tokens.length === 0) {
-      showAlert('No Tokens', 'Generating access token...', 'warning');
-      return;
-    }
-
-    const doorId = door.door_id || door.id;
-    setRequestingDoorId(doorId);
-
-    try {
-      // Use first available token
-      const token = data.tokens[0];
-      
-      // Request access
-      const response = await mqttAccessService.requestDoorAccess(doorId, token.id);
-      
-      // Show result
-      if (response.status === 'GRANTED') {
-        showAlert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`, 'success');
-      } else if (response.status === 'FACE_AUTH_REQUIRED') {
-        showAlert('Face Authentication Required', 'Please proceed to face recognition', 'info');
-      } else if (response.status === 'PENDING') {
-        showAlert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`, 'info');
-      } else {
-        showAlert('Access Denied', response.message || 'Your request was denied', 'error');
-      }
-
-      // Refresh data to update access logs
-      setTimeout(() => fetchData(), 2000);
-    } catch (error) {
-      showAlert('Error', error.message || 'Failed to request access', 'error');
-    } finally {
-      setRequestingDoorId(null);
-    }
-  };
-
-  /**
-   * Generate new MQTT token if none exists
-   */
-  const generateToken = async () => {
-    try {
-      const newToken = await mqttTokenService.generateToken(`Mobile-${user.full_name}`);
-      setData(prev => ({
-        ...prev,
-        tokens: [...prev.tokens, newToken]
-      }));
-      Alert.alert('Success', 'MQTT token generated');
-    } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to generate token');
-    }
-  };
-
-  /**
-   * Auto-generate MQTT token on mount if user doesn't have one
-   */
+  // Initialize data on mount
   useEffect(() => {
-    const autoGenerateTokenIfNeeded = async () => {
-      try {
-        // Only auto-generate if user is logged in and has no tokens
-        if (user && data.tokens.length === 0 && !loading) {
+    if (!hasInitialized) {
+      fetchData();
+      setHasInitialized(true);
+    }
+  }, [hasInitialized, fetchData]);
+
+  // Auto-generate MQTT token after initial fetch
+  useEffect(() => {
+    if (hasInitialized && !loading && user && data.tokens.length === 0) {
+      const autoGenerateToken = async () => {
+        try {
           const newToken = await mqttTokenService.generateToken(`Mobile-${user.full_name}`);
           setData(prev => ({
             ...prev,
             tokens: [newToken]
           }));
+        } catch (error) {
+          console.log('Auto-token generation skipped:', error.message);
         }
-      } catch (error) {
-        // Silently fail - user can manually generate if needed
-        console.log('Auto-token generation skipped:', error.message);
-      }
-    };
-
-    // Delay auto-generation to let initial fetch complete
-    const timer = setTimeout(autoGenerateTokenIfNeeded, 500);
-    return () => clearTimeout(timer);
-  }, [user, loading, data.tokens.length]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+      };
+      autoGenerateToken();
+    }
+  }, [hasInitialized, loading, user, data.tokens.length]);
 
   const today = data.att.find(a => new Date(a.check_in).toDateString() === new Date().toDateString());
   const weekHrs = data.att.filter(a => new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
