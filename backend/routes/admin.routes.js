@@ -8,6 +8,9 @@ const {
   getTokenAlerts,
   acknowledgeAlert,
   acknowledgeAlertsBulk,
+  assignTeamToManager,
+  removeTeamMember,
+  getManagerTeam,
 } = require('../controllers/admin.controller');
 const { authenticate } = require('../middleware/auth');
 
@@ -38,5 +41,18 @@ router.post('/ble-tokens/alerts/:alertId/acknowledge', authenticate, acknowledge
 
 // Acknowledge multiple alerts
 router.post('/ble-tokens/alerts/bulk-acknowledge', authenticate, acknowledgeAlertsBulk);
+
+/**
+ * Manager Team Management Routes (Admin Only)
+ */
+
+// Assign team members to a manager
+router.post('/manager-teams/assign', authenticate, assignTeamToManager);
+
+// Get team members for a manager
+router.get('/manager-teams/:manager_id', authenticate, getManagerTeam);
+
+// Remove team member from manager
+router.delete('/manager-teams/:manager_id/:member_id', authenticate, removeTeamMember);
 
 module.exports = router;

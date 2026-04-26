@@ -395,6 +395,109 @@ const acknowledgeAlertsBulk = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/admin/manager-teams/assign
+ * Assign team members to a manager (admin only)
+ */
+const assignTeamToManager = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { manager_id, team_member_ids } = req.body;
+
+    if (!manager_id || !Array.isArray(team_member_ids) || team_member_ids.length === 0) {
+      return error(res, 'Manager ID and team member IDs are required', 400);
+    }
+
+    // Verify manager exists and has manager role
+    const [manager] = await db.query(
+      `SELECT u.user_id, r.access_level FROM users u 
+       JOIN roles r ON u.role_id = r.role_id 
+       WHERE u.user_id = ? AND r.access_level = 4`,
+      [manager_id]
+    );
+
+    if (!manager.length) {
+      return error(res, 'Manager not found or invalid role', 404);
+    }
+
+    // Insert team members (ignore duplicates)
+    for (const member_id of team_member_ids) {
+      await db.query(
+        `INSERT IGNORE INTO manager_team_members (manager_id, team_member_id, assigned_at) 
+         VALUES (?, ?, NOW())`,
+        [manager_id, member_id]
+      );
+    }
+
+    return success(res, {
+      manager_id,
+      assigned_count: team_member_ids.length
+    }, 'Team members assigned to manager');
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/admin/manager-teams/:manager_id/:member_id
+ * Remove team member from manager
+ */
+const removeTeamMember = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { manager_id, member_id } = req.params;
+
+    const [result] = await db.query(
+      `DELETE FROM manager_team_members WHERE manager_id = ? AND team_member_id = ?`,
+      [manager_id, member_id]
+    );
+
+    if (result.affectedRows === 0) {
+      return error(res, 'Team member assignment not found', 404);
+    }
+
+    return success(res, {}, 'Team member removed');
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/admin/manager-teams/:manager_id
+ * Get all team members for a specific manager
+ */
+const getManagerTeam = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { manager_id } = req.params;
+
+    const [members] = await db.query(
+      `SELECT u.user_id, u.full_name, u.email, u.department, u.status, mtm.assigned_at
+       FROM manager_team_members mtm
+       JOIN users u ON mtm.team_member_id = u.user_id
+       WHERE mtm.manager_id = ?
+       ORDER BY u.full_name`,
+      [manager_id]
+    );
+
+    return success(res, members, 'Manager team members retrieved');
+
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getUsersTokenStatus,
   generateTokenForUser,
@@ -402,5 +505,8 @@ module.exports = {
   getTokenAuditLog,
   getTokenAlerts,
   acknowledgeAlert,
-  acknowledgeAlertsBulk
+  acknowledgeAlertsBulk,
+  assignTeamToManager,
+  removeTeamMember,
+  getManagerTeam
 };

@@ -143,6 +143,43 @@ export default function DashboardScreen({ navigation }) {
     }
   }, [hasInitialized, loading, user, data.tokens.length]);
 
+  // Handle door access requests
+  const handleRequestAccess = async (door) => {
+    if (!user) {
+      showAlert('Error', 'User not authenticated', 'error');
+      return;
+    }
+
+    if (!data.tokens || data.tokens.length === 0) {
+      showAlert('No Tokens', 'Generating access token...', 'warning');
+      return;
+    }
+
+    const doorId = door.door_id || door.id;
+    setRequestingDoorId(doorId);
+
+    try {
+      const token = data.tokens[0];
+      const response = await mqttAccessService.requestDoorAccess(doorId, token.id);
+      
+      if (response.status === 'GRANTED') {
+        showAlert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`, 'success');
+      } else if (response.status === 'FACE_AUTH_REQUIRED') {
+        showAlert('Face Authentication Required', 'Please proceed to face recognition', 'info');
+      } else if (response.status === 'PENDING') {
+        showAlert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`, 'info');
+      } else {
+        showAlert('Access Denied', response.message || 'Your request was denied', 'error');
+      }
+
+      setTimeout(() => fetchData(), 2000);
+    } catch (error) {
+      showAlert('Error', error.message || 'Failed to request access', 'error');
+    } finally {
+      setRequestingDoorId(null);
+    }
+  };
+
   const today = data.att.find(a => new Date(a.check_in).toDateString() === new Date().toDateString());
   const weekHrs = data.att.filter(a => new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
   const unread = data.notifs.filter(n => !n.is_read).length;
