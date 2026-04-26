@@ -1,21 +1,59 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/apiService';
+import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
+import { mqttAccessService } from '../../services/mqttService';
+import { CustomAlert } from '../../components/CustomAlert';
 
 export default function MyDoorsScreen({ navigation }) {
+  const { user } = useAuth();
   const colors = useThemeColors();
+  const alertRef = React.useRef(null);
+
+  // Helper function to show custom alerts
+  const showAlert = (title, message, type = 'info', buttons = []) => {
+    const defaultButtons = [{ text: 'OK', onPress: () => {} }];
+    alertRef.current?.show({
+      title,
+      message,
+      type,
+      buttons: buttons.length > 0 ? buttons : defaultButtons
+    });
+  };
+
+  const styles = StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.bg },
+    container: { padding: 24 },
+    centered: { flex: 1, justifyContent: 'center', backgroundColor: colors.bg },
+    rowBC: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+    doorRequestCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginBottom: 12 },
+    doorRequestHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    doorRequestName: { flex: 1, color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
+    metaText: { color: colors.textMuted, fontSize: 12 },
+    doorAccessLevel: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.accentBg },
+    doorAccessLevelText: { fontSize: 10, fontWeight: '600', color: colors.accent },
+    requestAccessBtn: { backgroundColor: colors.accent, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' },
+    requestAccessBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+    emptyState: { backgroundColor: colors.bgCard, padding: 20, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.accentBg, borderStyle: 'dashed' },
+    emptyIcon: { marginBottom: 10 },
+    emptyTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '500', marginBottom: 4 },
+    emptySubtitle: { color: colors.textMuted, fontSize: 10, fontStyle: 'italic', marginTop: 12 },
+  });
+
   const [doors, setDoors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [requestingDoorId, setRequestingDoorId] = useState(null);
 
   const fetchManagerDoors = useCallback(async () => {
     try {
-      // Managers see doors assigned to THEM (just like employees see in Quick Access)
-      // Use the same MY_DOORS endpoint that employees use
+      // Managers see doors assigned to THEM (just like employees)
       const doorsRes = await api.get(API.MY_DOORS);
       const managerDoors = doorsRes.data.data || [];
       
@@ -30,31 +68,36 @@ export default function MyDoorsScreen({ navigation }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchManagerDoors();
-  }, [fetchManagerDoors]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchManagerDoors();
+    }, [fetchManagerDoors])
+  );
 
-  const styles = StyleSheet.create({
-    safe: { flex: 1, backgroundColor: colors.bg },
-    container: { padding: 16 },
-    header: { marginBottom: 20, paddingTop: 10 },
-    title: { color: colors.textPrimary, fontSize: 24, fontWeight: '600', marginBottom: 4 },
-    subtitle: { color: colors.textMuted, fontSize: 12 },
-    doorCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, marginBottom: 12 },
-    doorName: { color: colors.textPrimary, fontSize: 16, fontWeight: '600', marginBottom: 8 },
-    doorInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-    infoIcon: { width: 20, height: 20, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-    infoText: { color: colors.textMuted, fontSize: 12, flex: 1 },
-    membersSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
-    membersTitle: { color: colors.textMuted, fontSize: 10, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' },
-    memberBadge: { display: 'inline-block', backgroundColor: colors.accentBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 6, marginBottom: 6 },
-    memberText: { color: colors.accent, fontSize: 11, fontWeight: '500' },
-    emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
-    emptyIcon: { marginBottom: 16 },
-    emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 },
-    emptyText: { fontSize: 12, color: colors.textMuted },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
-  });
+  // Handle door access requests
+  const handleRequestAccess = async (door) => {
+    if (!user) {
+      showAlert('Error', 'User not authenticated', 'error');
+      return;
+    }
+    
+    setRequestingDoorId(door.door_id || door.id);
+    try {
+      await mqttAccessService.requestAccess({
+        door_id: door.door_id || door.id,
+        door_name: door.door_name || door.name,
+        user_id: user.user_id,
+        user_name: user.full_name
+      });
+      showAlert('Success', `Access request sent for ${door.door_name || door.name}`, 'success');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to request access';
+      showAlert('Error', errorMsg, 'error');
+    } finally {
+      setRequestingDoorId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -70,54 +113,66 @@ export default function MyDoorsScreen({ navigation }) {
         contentContainerStyle={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchManagerDoors} tintColor={colors.accent} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Team Doors</Text>
-          <Text style={styles.subtitle}>Doors accessible by your team members</Text>
+        {/* Header */}
+        <View style={styles.rowBC}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="folder-open" size={14} color={colors.textSecondary} />
+            <Text style={styles.sectionTitle}>My Doors</Text>
+          </View>
         </View>
 
+        {/* Door Cards */}
         {doors && doors.length > 0 ? (
           doors.map((door) => (
-            <View key={door.door_id || door.id} style={styles.doorCard}>
-              <Text style={styles.doorName}>{door.door_name || door.name || 'Door'}</Text>
-              
-              <View style={styles.doorInfo}>
-                <View style={[styles.infoIcon, { backgroundColor: colors.accentBg }]}>
-                  <Ionicons name="location-outline" size={12} color={colors.accent} />
+            <View key={door.door_id || door.id} style={styles.doorRequestCard}>
+              <View style={styles.doorRequestHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.doorRequestName}>{door.door_name || door.name || 'Door'}</Text>
+                  <Text style={styles.metaText}>{door.location || 'Unknown location'}</Text>
                 </View>
-                <Text style={styles.infoText}>{door.location || 'Unknown location'}</Text>
+                <View style={[styles.doorAccessLevel, { backgroundColor: colors.accentBg }]}>
+                  <Text style={styles.doorAccessLevelText}>
+                    {door.security_level || 'Standard'}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.doorInfo}>
-                <View style={[styles.infoIcon, { backgroundColor: colors.accentBg }]}>
-                  <Ionicons name="shield-outline" size={12} color={colors.accent} />
-                </View>
-                <Text style={styles.infoText}>{door.security_level || 'Standard'}</Text>
-              </View>
-
-              {door.assignedTo && door.assignedTo.length > 0 && (
-                <View style={styles.membersSection}>
-                  <Text style={styles.membersTitle}>Assigned to</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                    {door.assignedTo.map((member, idx) => (
-                      <View key={idx} style={styles.memberBadge}>
-                        <Text style={styles.memberText}>{member}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
+              <TouchableOpacity 
+                style={[
+                  styles.requestAccessBtn,
+                  requestingDoorId === (door.door_id || door.id) && { opacity: 0.7 }
+                ]}
+                onPress={() => handleRequestAccess(door)}
+                disabled={requestingDoorId === (door.door_id || door.id)}
+              >
+                {requestingDoorId === (door.door_id || door.id) ? (
+                  <>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text style={styles.requestAccessBtnText}>Requesting...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="lock-open" size={14} color="#fff" />
+                    <Text style={styles.requestAccessBtnText}>Request Access</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           ))
         ) : (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="lock-outline" size={48} color={colors.textMuted} />
+              <Ionicons name="information-circle-outline" size={32} color={colors.accent} />
             </View>
             <Text style={styles.emptyTitle}>No Doors Assigned</Text>
-            <Text style={styles.emptyText}>Your team members don't have any door access</Text>
+            <Text style={styles.metaText}>Your account doesn't have any door access</Text>
+            <Text style={styles.emptySubtitle}>Please contact your administrator to assign doors to your account</Text>
           </View>
         )}
       </ScrollView>
+
+      {/* Custom Alert Modal */}
+      <CustomAlert ref={alertRef} />
     </SafeAreaView>
   );
 }
