@@ -71,7 +71,7 @@ void setup() {
   }
   
   // Connect to WiFi
-  if (!connectToWiFi(WIFI_SSID, WIFI_PASSWORD)) {
+  if (!connectToWiFi(One million coffee wifi, ooredoo124)) {
     Serial.println("FATAL: WiFi connection failed!");
     while (1) {
       digitalWrite(LED_PIN, HIGH);

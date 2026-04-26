@@ -88,20 +88,25 @@ def send_image_to_api(image_path):
         with open(image_path, 'rb') as f:
             image_data = f.read()
         
+        # Encode image as base64
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
         # Prepare headers
         headers = {
-            'Content-Type': 'image/jpeg'
+            'Content-Type': 'application/json',
+            'X-API-Key': FACE_SERVICE_API_KEY if FACE_SERVICE_API_KEY else 'test-key'
         }
         
-        # Add API key if configured
-        if FACE_SERVICE_API_KEY:
-            headers['Authorization'] = f'Bearer {FACE_SERVICE_API_KEY}'
+        # Prepare JSON payload
+        payload = {
+            'image_base64': image_base64
+        }
         
         # Send to API
         print_info("Sending request...")
         response = requests.post(
-            f"{FACE_SERVICE_URL}/predict",
-            data=image_data,
+            f"{FACE_SERVICE_URL}/recognize",
+            json=payload,
             headers=headers,
             timeout=30,
             verify=False
@@ -109,7 +114,7 @@ def send_image_to_api(image_path):
         
         print(f"  Response status: {response.status_code}")
         
-        if response.status_code != 200:
+        if response.status_code not in [200, 201]:
             print_error(f"API returned status {response.status_code}")
             print(f"  Response: {response.text}")
             return None
@@ -140,23 +145,30 @@ def process_response(response):
     if response is None:
         return False
     
-    # Extract fields
+    # Extract fields from API response
     success = response.get('success', False)
-    face_detected = response.get('face_detected', False)
-    confidence = response.get('confidence', 0.0)
-    user_id = response.get('user_id', 'unknown')
-    message = response.get('message', 'No message')
+    
+    if not success:
+        error = response.get('error', 'Unknown error')
+        print_error(f"API Error: {error}")
+        return False
+    
+    data = response.get('data', {})
+    user_id = data.get('user_id', None)
+    similarity = data.get('similarity', 0.0)
+    is_authorized = data.get('is_authorized', False)
+    threshold = data.get('threshold', CONFIDENCE_THRESHOLD)
     
     print(f"\n{Colors.BOLD}API Response:{Colors.RESET}")
     print(f"  Success: {success}")
-    print(f"  Face Detected: {face_detected}")
-    print(f"  Confidence: {confidence:.2%}")
-    print(f"  User ID: {user_id}")
-    print(f"  Message: {message}")
+    print(f"  User ID: {user_id if user_id else 'Unknown'}")
+    print(f"  Similarity Score: {similarity:.2%}")
+    print(f"  Is Authorized: {is_authorized}")
+    print(f"  Threshold: {threshold:.2%}")
     
-    return success, face_detected, confidence, user_id
+    return success, user_id, similarity, is_authorized
 
-def make_access_decision(success, face_detected, confidence):
+def make_access_decision(success, user_id, similarity, is_authorized):
     """Determine if access should be granted"""
     print(f"\n{Colors.BOLD}Access Control Decision:{Colors.RESET}")
     print(f"  Threshold: {CONFIDENCE_THRESHOLD:.2%}")
@@ -165,15 +177,15 @@ def make_access_decision(success, face_detected, confidence):
         print_error("API call failed - Access DENIED")
         return False
     
-    if not face_detected:
-        print_error("No face detected - Access DENIED")
+    if user_id is None:
+        print_error("No face match found - Access DENIED")
         return False
     
-    if confidence >= CONFIDENCE_THRESHOLD:
-        print_success(f"Confidence {confidence:.2%} >= threshold {CONFIDENCE_THRESHOLD:.2%}")
+    if is_authorized:
+        print_success(f"User {user_id}: Similarity {similarity:.2%} >= threshold {CONFIDENCE_THRESHOLD:.2%}")
         return True
     else:
-        print_error(f"Confidence {confidence:.2%} < threshold {CONFIDENCE_THRESHOLD:.2%} - Access DENIED")
+        print_error(f"User {user_id}: Similarity {similarity:.2%} < threshold {CONFIDENCE_THRESHOLD:.2%} - Access DENIED")
         return False
 
 def simulate_door_unlock(access_granted):
@@ -205,12 +217,12 @@ def simulate_door_unlock(access_granted):
         print(f"  Door solenoid: INACTIVE")
         return False
 
-def log_access_attempt(image_path, success, confidence, user_id):
+def log_access_attempt(image_path, success, similarity, user_id):
     """Log access attempt to file"""
     log_file = "door_access_log.txt"
     
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"[{timestamp}] Image: {os.path.basename(image_path)} | Success: {success} | Confidence: {confidence:.2%} | User: {user_id}\n"
+    log_entry = f"[{timestamp}] Image: {os.path.basename(image_path)} | Success: {success} | Similarity: {similarity:.2%} | User: {user_id if user_id else 'Unknown'}\n"
     
     with open(log_file, 'a') as f:
         f.write(log_entry)
@@ -338,11 +350,11 @@ def main():
     if result is None:
         return
     
-    success, face_detected, confidence, user_id = result
+    success, user_id, similarity, is_authorized = result
     
     # Make access decision
     print_header("Step 4: Access Control Decision")
-    access_granted = make_access_decision(success, face_detected, confidence)
+    access_granted = make_access_decision(success, user_id, similarity, is_authorized)
     
     # Simulate door control
     print_header("Step 5: Door Control Simulation")
@@ -350,18 +362,18 @@ def main():
     
     # Log attempt
     print_header("Step 6: Audit Logging")
-    log_access_attempt(image_path, access_granted, confidence, user_id)
+    log_access_attempt(image_path, access_granted, similarity, user_id)
     
     # Summary
     print_header("Test Complete")
     print(f"{Colors.BOLD}Summary:{Colors.RESET}")
     print(f"  Image: {os.path.basename(image_path)}")
-    print(f"  Face Detected: {face_detected}")
-    print(f"  Confidence: {confidence:.2%}")
+    print(f"  User ID: {user_id if user_id else 'Unknown'}")
+    print(f"  Similarity: {similarity:.2%}")
     print(f"  Access Decision: {'GRANTED ✓' if access_granted else 'DENIED ✗'}")
     
     # Cleanup
-    if image_path and image_path.startswith("webcam_") or image_path.startswith("test_"):
+    if image_path and (image_path.startswith("webcam_") or image_path.startswith("test_")):
         try:
             os.remove(image_path)
             print_info(f"Cleaned up temporary file: {image_path}")

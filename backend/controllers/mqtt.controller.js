@@ -145,6 +145,8 @@ const requestDoorAccess = async (req, res, next) => {
     const now = new Date();
     const currentTime = now.toTimeString().slice(0, 5);
     const dayOfWeek = now.getDay();
+    
+    console.log(`[MQTT Access] Time check: current time=${currentTime}, allowed from=${doorAccess.allowed_from}, allowed until=${doorAccess.allowed_until}`);
 
     if (doorAccess.allowed_from && currentTime < doorAccess.allowed_from) {
       return error(res, 'Access not allowed at this time', 403);
@@ -155,8 +157,10 @@ const requestDoorAccess = async (req, res, next) => {
     }
 
     // Check day of week restrictions
-    if (doorAccess.days_of_week) {
+    // If days_of_week is set, validate the current day
+    if (doorAccess.days_of_week && doorAccess.days_of_week.trim()) {
       const allowedDays = doorAccess.days_of_week.split(',').map(d => parseInt(d.trim()));
+      console.log(`[MQTT Access] Day check: current day=${dayOfWeek}, allowed days=${allowedDays}`);
       if (!allowedDays.includes(dayOfWeek)) {
         return error(res, 'No access on this day', 403);
       }

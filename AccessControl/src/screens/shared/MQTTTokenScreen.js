@@ -20,28 +20,37 @@ export default function MQTTTokenScreen({ navigation }) {
     safe: { flex: 1, backgroundColor: colors.bg },
     container: { padding: 24 },
     header: { marginBottom: 24 },
-    title: { color: colors.textPrimary, fontSize: 24, fontWeight: '700', marginBottom: 4 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+    title: { color: colors.textPrimary, fontSize: 24, fontWeight: '700' },
     subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
-    card: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 16, marginBottom: 16 },
-    cardTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 8 },
-    cardSub: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
-    tokenCard: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 12, padding: 14, marginBottom: 10 },
-    tokenDevice: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', marginBottom: 4 },
-    tokenMeta: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-    tokenDate: { fontSize: 11, color: colors.textMuted },
-    tokenExpiry: { fontSize: 11, fontWeight: '500', color: colors.warning },
-    tokenActions: { flexDirection: 'row', gap: 8 },
-    revokeBtn: { flex: 1, backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.dangerBorder, borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+    infoCard: { backgroundColor: colors.accentBg, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: 14, padding: 16, marginBottom: 24, flexDirection: 'row', gap: 12 },
+    infoIcon: { width: 40, height: 40, backgroundColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    infoText: { flex: 1, color: colors.textPrimary, fontSize: 13, lineHeight: 18 },
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+    sectionLabel: { flex: 1 },
+    tokenCount: { backgroundColor: colors.accent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, color: '#fff', fontSize: 11, fontWeight: '600' },
+    tokenCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginBottom: 12, overflow: 'hidden' },
+    tokenHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+    tokenIcon: { width: 36, height: 36, backgroundColor: colors.accentBg, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    tokenInfo: { flex: 1 },
+    tokenDevice: { color: colors.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 2 },
+    tokenMeta: { color: colors.textMuted, fontSize: 11 },
+    tokenDetails: { backgroundColor: colors.bgDeep, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 10, paddingTop: 10 },
+    detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' },
+    detailLabel: { color: colors.textMuted, fontSize: 11 },
+    detailValue: { color: colors.textPrimary, fontSize: 11, fontWeight: '500' },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.successBg },
+    statusText: { color: colors.success, fontSize: 10, fontWeight: '600' },
+    revokeBtn: { marginTop: 10, backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.dangerBorder, borderRadius: 8, paddingVertical: 10, alignItems: 'center', flexDirection: 'row', gap: 6, justifyContent: 'center' },
     revokeBtnText: { color: colors.danger, fontSize: 12, fontWeight: '600' },
-    generateBtn: { backgroundColor: colors.accent, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
-    generateBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-    emptyText: { textAlign: 'center', color: colors.textMuted, fontSize: 13, marginVertical: 20 },
-    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginTop: 16, marginBottom: 12 },
+    emptyContainer: { alignItems: 'center', paddingVertical: 40 },
+    emptyIcon: { marginBottom: 12 },
+    emptyText: { color: colors.textPrimary, fontSize: 14, fontWeight: '500', marginBottom: 4 },
+    emptySubtext: { color: colors.textMuted, fontSize: 12 },
   });
 
   const [tokens, setTokens] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [revoking, setRevoking] = useState(null);
 
   const fetchTokens = useCallback(async () => {
@@ -62,34 +71,6 @@ export default function MQTTTokenScreen({ navigation }) {
       fetchTokens();
     }, [fetchTokens])
   );
-
-  const handleGenerateToken = async () => {
-    Alert.prompt(
-      'Device Name',
-      'What device is this token for?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Generate',
-          onPress: async (deviceName) => {
-            if (!deviceName?.trim()) return;
-            try {
-              setGenerating(true);
-              const newToken = await mqttTokenService.generateToken(deviceName);
-              setTokens([...tokens, newToken]);
-              Alert.alert('Success', 'MQTT token generated for ' + deviceName);
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to generate token');
-            } finally {
-              setGenerating(false);
-            }
-          }
-        }
-      ],
-      'plain-text',
-      `Mobile-${user?.full_name || 'Device'}`
-    );
-  };
 
   const handleRevokeToken = (tokenId, deviceName) => {
     Alert.alert(
@@ -117,37 +98,6 @@ export default function MQTTTokenScreen({ navigation }) {
     );
   };
 
-  const handleRevokeAll = () => {
-    if (tokens.length === 0) {
-      Alert.alert('No Tokens', 'You have no active tokens to revoke');
-      return;
-    }
-
-    Alert.alert(
-      'Revoke All Tokens',
-      'This will disable all your MQTT tokens. You will need to generate new ones to regain access.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revoke All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setRevoking('all');
-              await mqttTokenService.revokeAllTokens();
-              setTokens([]);
-              Alert.alert('Success', 'All tokens revoked');
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Failed to revoke tokens');
-            } finally {
-              setRevoking(null);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -161,75 +111,93 @@ export default function MQTTTokenScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>🔐 MQTT Tokens</Text>
-          <Text style={styles.subtitle}>Manage door access tokens for prompted MQTT-based door unlocking</Text>
+          <View style={styles.headerRow}>
+            <Ionicons name="key" size={28} color={colors.accent} />
+            <Text style={styles.title}>Access Tokens</Text>
+          </View>
+          <Text style={styles.subtitle}>Manage your MQTT tokens for door access requests</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>What are MQTT tokens?</Text>
-          <Text style={styles.cardSub}>
-            MQTT tokens are used to request door access on your mobile device. Unlike automatic BLE proximity, you explicitly tap a button to request access. Each token is encrypted and expires after 30 days.
+        {/* Info Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoIcon}>
+            <Ionicons name="information-circle" size={24} color="#fff" />
+          </View>
+          <Text style={styles.infoText}>
+            Tokens are automatically generated and manage your door access requests. Revoke a token if your device is lost or compromised.
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Active Tokens ({tokens.length})</Text>
+        {/* Active Tokens */}
+        <View style={styles.sectionTitle}>
+          <View style={styles.sectionLabel}>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>Active Tokens</Text>
+          </View>
+          <Text style={styles.tokenCount}>{tokens.length}</Text>
+        </View>
 
         {tokens.length === 0 ? (
-          <Text style={styles.emptyText}>No active tokens. Generate one to start requesting door access.</Text>
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="lock-open" size={48} color={colors.accent} />
+            </View>
+            <Text style={styles.emptyText}>No Active Tokens</Text>
+            <Text style={styles.emptySubtext}>Tokens are auto-generated on first login</Text>
+          </View>
         ) : (
           tokens.map((token) => (
             <View key={token.id} style={styles.tokenCard}>
-              <Text style={styles.tokenDevice}>📱 {token.device_name || 'Mobile Device'}</Text>
-              <View style={styles.tokenMeta}>
-                <Text style={styles.tokenDate}>
-                  Created: {new Date(token.created_at).toLocaleDateString()}
-                </Text>
-                <Text style={styles.tokenExpiry}>
-                  Expires: {new Date(token.expires_at).toLocaleDateString()}
-                </Text>
+              {/* Token Header */}
+              <View style={styles.tokenHeader}>
+                <View style={styles.tokenIcon}>
+                  <Ionicons name="phone-portrait" size={18} color={colors.accent} />
+                </View>
+                <View style={styles.tokenInfo}>
+                  <Text style={styles.tokenDevice}>{token.device_name || 'Mobile Device'}</Text>
+                  <Text style={styles.tokenMeta}>Created {new Date(token.created_at).toLocaleDateString()}</Text>
+                </View>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusText}>Active</Text>
+                </View>
               </View>
-              <View style={styles.tokenActions}>
-                <TouchableOpacity
-                  style={styles.revokeBtn}
-                  onPress={() => handleRevokeToken(token.id, token.device_name)}
-                  disabled={revoking === token.id}
-                >
-                  {revoking === token.id ? (
+
+              {/* Token Details */}
+              <View style={styles.tokenDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Expires</Text>
+                  <Text style={styles.detailValue}>{new Date(token.expires_at).toLocaleDateString()}</Text>
+                </View>
+                
+                {token.last_used_at && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Last Used</Text>
+                    <Text style={styles.detailValue}>{new Date(token.last_used_at).toLocaleDateString()}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Revoke Button */}
+              <TouchableOpacity
+                style={styles.revokeBtn}
+                onPress={() => handleRevokeToken(token.id, token.device_name)}
+                disabled={revoking === token.id}
+              >
+                {revoking === token.id ? (
+                  <>
                     <ActivityIndicator color={colors.danger} size="small" />
-                  ) : (
-                    <Text style={styles.revokeBtnText}>🔴 Revoke</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+                    <Text style={styles.revokeBtnText}>Revoking...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                    <Text style={styles.revokeBtnText}>Revoke Token</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           ))
-        )}
-
-        <TouchableOpacity
-          style={[styles.generateBtn, generating && { opacity: 0.6 }]}
-          onPress={handleGenerateToken}
-          disabled={generating}
-        >
-          {generating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.generateBtnText}>+ Generate New Token</Text>
-          )}
-        </TouchableOpacity>
-
-        {tokens.length > 0 && (
-          <TouchableOpacity
-            style={[styles.generateBtn, { backgroundColor: colors.danger, marginTop: 8 }]}
-            onPress={handleRevokeAll}
-            disabled={revoking === 'all'}
-          >
-            {revoking === 'all' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.generateBtnText}>Revoke All Tokens (Emergency)</Text>
-            )}
-          </TouchableOpacity>
         )}
       </ScrollView>
     </SafeAreaView>

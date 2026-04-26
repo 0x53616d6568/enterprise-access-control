@@ -7,10 +7,23 @@ import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
 import { mqttTokenService, mqttAccessService } from '../../services/mqttService';
+import { CustomAlert } from '../../components/CustomAlert';
 
 export default function DashboardScreen({ navigation }) {
   const { user } = useAuth();
   const colors = useThemeColors();
+  const alertRef = React.useRef(null);
+
+  // Helper function to show custom alerts
+  const showAlert = (title, message, type = 'info', buttons = []) => {
+    const defaultButtons = [{ text: 'OK', onPress: () => {} }];
+    alertRef.current?.show({
+      title,
+      message,
+      type,
+      buttons: buttons.length > 0 ? buttons : defaultButtons
+    });
+  };
 
   const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
@@ -113,15 +126,13 @@ export default function DashboardScreen({ navigation }) {
   const handleRequestAccess = async (door) => {
     // Check access level
     if (!user) {
-      Alert.alert('Error', 'User not authenticated');
+      showAlert('Error', 'User not authenticated', 'error');
       return;
     }
 
     // Check if user has active tokens
     if (!data.tokens || data.tokens.length === 0) {
-      Alert.alert('No Tokens', 'Generating access token...', [
-        { text: 'OK', style: 'default' }
-      ]);
+      showAlert('No Tokens', 'Generating access token...', 'warning');
       return;
     }
 
@@ -137,19 +148,19 @@ export default function DashboardScreen({ navigation }) {
       
       // Show result
       if (response.status === 'GRANTED') {
-        Alert.alert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`);
+        showAlert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`, 'success');
       } else if (response.status === 'FACE_AUTH_REQUIRED') {
-        Alert.alert('Face Authentication Required', 'Please proceed to face recognition');
+        showAlert('Face Authentication Required', 'Please proceed to face recognition', 'info');
       } else if (response.status === 'PENDING') {
-        Alert.alert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`);
+        showAlert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`, 'info');
       } else {
-        Alert.alert('Access Denied', response.message || 'Your request was denied');
+        showAlert('Access Denied', response.message || 'Your request was denied', 'error');
       }
 
       // Refresh data to update access logs
       setTimeout(() => fetchData(), 2000);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to request access');
+      showAlert('Error', error.message || 'Failed to request access', 'error');
     } finally {
       setRequestingDoorId(null);
     }
@@ -243,7 +254,7 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.sectionTitle}>Assigned Doors</Text>
             </View>
             {data.tokens.length > 0 && (
-              <TouchableOpacity onPress={() => Alert.alert('Active Tokens', `You have ${data.tokens.length} active token${data.tokens.length !== 1 ? 's' : ''} for door access requests`)}>
+              <TouchableOpacity onPress={() => showAlert('Active Tokens', `You have ${data.tokens.length} active token${data.tokens.length !== 1 ? 's' : ''} for door access requests`, 'info')}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Ionicons name="key" size={12} color={colors.accent} />
                   <Text style={[styles.link, { fontSize: 11 }]}>{data.tokens.length} Token{data.tokens.length !== 1 ? 's' : ''}</Text>
@@ -331,6 +342,9 @@ export default function DashboardScreen({ navigation }) {
           </View>
         ))}
       </ScrollView>
+
+      {/* Custom Alert Modal */}
+      <CustomAlert ref={alertRef} />
     </SafeAreaView>
   );
 }

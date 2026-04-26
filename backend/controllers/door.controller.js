@@ -62,6 +62,11 @@ const assignUserDoor = async (req, res, next) => {
   try {
     const { user_id, door_id, allowed_from, allowed_until, days_of_week } = req.body;
     
+    // Default to all days (0-6) if not specified
+    const daysToSet = days_of_week || '0,1,2,3,4,5,6';
+    
+    console.log(`[Door Assignment] Assigning door ${door_id} to user ${user_id} with days: ${daysToSet}`);
+    
     // Check if already exists
     const [existing] = await db.query(
       `SELECT * FROM user_door_access WHERE user_id = ? AND door_id = ?`,
@@ -72,13 +77,13 @@ const assignUserDoor = async (req, res, next) => {
       // Update existing
       await db.query(
         `UPDATE user_door_access SET allowed_from = ?, allowed_until = ?, days_of_week = ? WHERE user_id = ? AND door_id = ?`,
-        [allowed_from, allowed_until, days_of_week, user_id, door_id]
+        [allowed_from, allowed_until, daysToSet, user_id, door_id]
       );
     } else {
       // Insert new
       await db.query(
         `INSERT INTO user_door_access (user_id, door_id, allowed_from, allowed_until, days_of_week) VALUES (?, ?, ?, ?, ?)`,
-        [user_id, door_id, allowed_from, allowed_until, days_of_week]
+        [user_id, door_id, allowed_from, allowed_until, daysToSet]
       );
     }
     
