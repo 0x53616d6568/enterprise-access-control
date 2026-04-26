@@ -14,6 +14,8 @@ const getUserAccessibleDoors = async (req, res, next) => {
   try {
     const userId = req.user.user_id;
     
+    console.log(`[Door Controller] Fetching accessible doors for userId: ${userId}`);
+    
     // Get doors accessible by individual assignment ONLY
     const [userDoors] = await db.query(`
       SELECT DISTINCT d.door_id, d.door_name, d.location, d.security_level,
@@ -24,8 +26,11 @@ const getUserAccessibleDoors = async (req, res, next) => {
       ORDER BY d.door_name
     `, [userId]);
     
+    console.log(`[Door Controller] Found ${userDoors.length} doors for userId: ${userId}`, userDoors);
+    
     return success(res, userDoors);
   } catch (err) { 
+    console.error(`[Door Controller] Error fetching doors for userId ${req.user.user_id}:`, err.message);
     next(err); 
   }
 };
