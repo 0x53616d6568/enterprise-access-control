@@ -31,14 +31,18 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      // Get all managers
-      const managersRes = await api.get(`${API.BASE_URL}/users?role=manager`);
-      const managerList = managersRes.data.data.filter(u => u.access_level === 4) || [];
+      // Get all users and filter for managers
+      const usersRes = await api.get(API.USERS);
+      const allUsers = usersRes.data.data || [];
+      
+      // Filter to get only managers (access_level === 4)
+      const managerList = allUsers.filter(u => u.access_level === 4);
+      console.log(`[Manager Assignment] Found ${managerList.length} managers:`, managerList.map(m => m.full_name));
       setManagers(managerList);
 
       // Get all non-manager users
-      const usersRes = await api.get(`${API.BASE_URL}/users`);
-      const nonManagers = (usersRes.data.data || []).filter(u => u.access_level < 4);
+      const nonManagers = allUsers.filter(u => u.access_level < 4);
+      console.log(`[Manager Assignment] Found ${nonManagers.length} non-managers`);
       setAllUsers(nonManagers);
     } catch (err) {
       console.error('Failed to fetch data:', err.message);
