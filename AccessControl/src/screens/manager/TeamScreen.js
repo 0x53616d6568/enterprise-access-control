@@ -55,14 +55,20 @@ export default function TeamScreen() {
 
   const fetchData = useCallback(async () => {
     try {
+      // For managers, this endpoint will only return their team members (backend filters)
+      // For non-managers, this endpoint returns all users
       const [usersRes, attRes] = await Promise.all([
         api.get(API.USERS),
         api.get(API.ALL_ATTENDANCE),
       ]);
-      setUsers(usersRes.data.data     || []);
-      setAttendance(attRes.data.data  || []);
+      
+      const allUsers = usersRes.data.data || [];
+      console.log(`[TeamScreen] Fetched ${allUsers.length} users for team overview`);
+      
+      setUsers(allUsers);
+      setAttendance(attRes.data.data || []);
     } catch (err) {
-      console.log('Team fetch error:', err.message);
+      console.error('Team fetch error:', err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);

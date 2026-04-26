@@ -31,22 +31,12 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
 
   const fetchData = useCallback(async () => {
     try {
-      // Get all users and filter for managers
       const usersRes = await api.get(API.USERS);
       const allUsers = usersRes.data.data || [];
       
-      console.log(`[Manager Assignment] Retrieved ${allUsers.length} total users`);
-      allUsers.forEach(u => console.log(`  - ${u.full_name}: access_level=${u.access_level}`));
-      
-      // Filter to get only managers (access_level === 3 with Manager role)
       const managerList = allUsers.filter(u => u.access_level === 3 && u.role_name === 'Manager');
-      console.log(`[Manager Assignment] Found ${managerList.length} managers:`, managerList.map(m => `${m.full_name}(${m.access_level})`));
       setManagers(managerList);
-
-      // Get all non-manager users
-      const nonManagers = allUsers.filter(u => u.access_level < 4);
-      console.log(`[Manager Assignment] Found ${nonManagers.length} non-managers`);
-      setAllUsers(nonManagers);
+      setAllUsers(allUsers.filter(u => u.access_level < 3));
     } catch (err) {
       console.error('Failed to fetch data:', err.message);
       showAlert('Error', 'Failed to load managers and users', 'error');
@@ -63,7 +53,6 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
   const handleSelectManager = async (manager) => {
     setSelectedManager(manager);
     setSelectedMembers([]);
-    // Fetch already assigned members
     try {
       const res = await api.get(`${API.BASE_URL}/admin/manager-teams/${manager.user_id}`);
       const assignedIds = (res.data.data || []).map(m => m.user_id);
@@ -89,7 +78,7 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
 
     setAssigning(true);
     try {
-      const response = await api.post(
+      await api.post(
         `${API.BASE_URL}/admin/manager-teams/assign`,
         {
           manager_id: selectedManager.user_id,
@@ -98,7 +87,7 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
       );
 
       showAlert('Success', `Assigned ${selectedMembers.length} team member(s) to ${selectedManager.full_name}`, 'success');
-      handleSelectManager(selectedManager); // Refresh
+      handleSelectManager(selectedManager);
     } catch (err) {
       showAlert('Error', err.response?.data?.message || 'Failed to assign team members', 'error');
     } finally {
@@ -108,27 +97,32 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
 
   const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
-    container: { padding: 16 },
-    header: { marginBottom: 20, paddingTop: 10 },
-    title: { color: colors.textPrimary, fontSize: 24, fontWeight: '600', marginBottom: 4 },
-    subtitle: { color: colors.textMuted, fontSize: 12 },
-    section: { marginBottom: 24 },
-    sectionTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase' },
-    managerCard: { backgroundColor: colors.bgCard, borderWidth: 2, borderRadius: 12, padding: 14, marginBottom: 10 },
-    managerCardSelected: { borderColor: colors.accent },
-    managerCardDefault: { borderColor: colors.border },
+    container: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 32 },
+    header: { marginBottom: 24, paddingTop: 8 },
+    title: { color: colors.textPrimary, fontSize: 26, fontWeight: '600', marginBottom: 4 },
+    subtitle: { color: colors.textMuted, fontSize: 13 },
+    twoColumnLayout: { flexDirection: 'row', gap: 16, flex: 1 },
+    leftPanel: { flex: 1, minWidth: '40%' },
+    rightPanel: { flex: 1, minWidth: '40%' },
+    panelTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 0.5 },
+    managerCard: { backgroundColor: colors.bgCard, borderWidth: 2, borderRadius: 12, padding: 14, marginBottom: 12, borderColor: colors.border },
+    managerCardSelected: { borderColor: colors.accent, backgroundColor: colors.accentBg },
     managerName: { color: colors.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 4 },
     managerMeta: { color: colors.textMuted, fontSize: 11 },
     searchInput: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: colors.textPrimary, marginBottom: 12 },
-    memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
-    memberCheckbox: { width: 24, height: 24, borderWidth: 2, borderColor: colors.border, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+    membersContainer: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden', maxHeight: 350 },
+    memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.bgDeep },
+    memberCheckbox: { width: 22, height: 22, borderWidth: 2, borderColor: colors.border, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
     memberCheckboxActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-    memberName: { flex: 1, color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
-    memberDept: { color: colors.textMuted, fontSize: 11 },
+    memberName: { flex: 1, color: colors.textPrimary, fontSize: 12, fontWeight: '500' },
+    memberDept: { color: colors.textMuted, fontSize: 10 },
+    selectedCount: { paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.accentBg, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
+    selectedCountText: { color: colors.accent, fontWeight: '600', fontSize: 12 },
     assignBtn: { backgroundColor: colors.accent, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16 },
     assignBtnDisabled: { opacity: 0.5 },
     assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-    emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+    emptyState: { alignItems: 'center', paddingVertical: 40 },
+    emptyIcon: { marginBottom: 12 },
     emptyText: { color: colors.textMuted, fontSize: 12 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   });
@@ -153,94 +147,115 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchData} tintColor={colors.accent} />}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Team Assignment</Text>
+          <Text style={styles.title}>Manage Teams</Text>
           <Text style={styles.subtitle}>Assign employees to managers</Text>
         </View>
 
-        {/* Managers Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Manager</Text>
-          {managers.length > 0 ? (
-            managers.map(manager => (
-              <TouchableOpacity
-                key={manager.user_id}
-                style={[
-                  styles.managerCard,
-                  selectedManager?.user_id === manager.user_id
-                    ? styles.managerCardSelected
-                    : styles.managerCardDefault
-                ]}
-                onPress={() => handleSelectManager(manager)}
-              >
-                <Text style={styles.managerName}>{manager.full_name}</Text>
-                <Text style={styles.managerMeta}>{manager.email}</Text>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No managers found</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Team Members Section */}
-        {selectedManager && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Assign Team Members</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search employees..."
-              placeholderTextColor={colors.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-
-            {filteredUsers.length > 0 ? (
-              <View style={{ backgroundColor: colors.bgCard, borderRadius: 10, overflow: 'hidden' }}>
-                {filteredUsers.map(user => (
-                  <TouchableOpacity
-                    key={user.user_id}
-                    style={styles.memberItem}
-                    onPress={() => handleToggleMember(user.user_id)}
-                  >
-                    <View
-                      style={[
-                        styles.memberCheckbox,
-                        selectedMembers.includes(user.user_id) && styles.memberCheckboxActive
-                      ]}
-                    >
-                      {selectedMembers.includes(user.user_id) && (
-                        <Ionicons name="checkmark" size={16} color="#fff" />
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.memberName}>{user.full_name}</Text>
-                      <Text style={styles.memberDept}>{user.department}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        {/* Two Column Layout */}
+        <View style={styles.twoColumnLayout}>
+          {/* Left: Managers */}
+          <View style={styles.leftPanel}>
+            <Text style={styles.panelTitle}>Managers</Text>
+            {managers.length > 0 ? (
+              managers.map(manager => (
+                <TouchableOpacity
+                  key={manager.user_id}
+                  style={[
+                    styles.managerCard,
+                    selectedManager?.user_id === manager.user_id && styles.managerCardSelected
+                  ]}
+                  onPress={() => handleSelectManager(manager)}
+                >
+                  <Text style={styles.managerName}>{manager.full_name}</Text>
+                  <Text style={styles.managerMeta}>{manager.email}</Text>
+                </TouchableOpacity>
+              ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No employees found</Text>
+                <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
+                <Text style={styles.emptyText}>No managers</Text>
               </View>
             )}
-
-            <TouchableOpacity
-              style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
-              onPress={handleAssignTeam}
-              disabled={assigning}
-            >
-              {assigning ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.assignBtnText}>
-                  Assign {selectedMembers.length} Member{selectedMembers.length !== 1 ? 's' : ''}
-                </Text>
-              )}
-            </TouchableOpacity>
           </View>
-        )}
+
+          {/* Right: Team Members */}
+          <View style={styles.rightPanel}>
+            <Text style={styles.panelTitle}>Team Members</Text>
+            {selectedManager ? (
+              <>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search..."
+                  placeholderTextColor={colors.textMuted}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+
+                {filteredUsers.length > 0 ? (
+                  <>
+                    <FlatList
+                      data={filteredUsers}
+                      scrollEnabled={false}
+                      keyExtractor={u => u.user_id.toString()}
+                      style={styles.membersContainer}
+                      renderItem={({ item: user, index }) => (
+                        <TouchableOpacity
+                          style={[
+                            styles.memberItem,
+                            index === filteredUsers.length - 1 && { borderBottomWidth: 0 }
+                          ]}
+                          onPress={() => handleToggleMember(user.user_id)}
+                        >
+                          <View
+                            style={[
+                              styles.memberCheckbox,
+                              selectedMembers.includes(user.user_id) && styles.memberCheckboxActive
+                            ]}
+                          >
+                            {selectedMembers.includes(user.user_id) && (
+                              <Ionicons name="checkmark-sharp" size={14} color="#fff" />
+                            )}
+                          </View>
+                          <View>
+                            <Text style={styles.memberName}>{user.full_name}</Text>
+                            <Text style={styles.memberDept}>{user.department}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                    />
+                    <View style={styles.selectedCount}>
+                      <Text style={styles.selectedCountText}>{selectedMembers.length} selected</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="search-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
+                    <Text style={styles.emptyText}>No employees found</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
+                  onPress={handleAssignTeam}
+                  disabled={assigning}
+                >
+                  {assigning ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.assignBtnText}>
+                      {selectedMembers.length > 0 ? `Assign ${selectedMembers.length} Member${selectedMembers.length !== 1 ? 's' : ''}` : 'Select Members First'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="arrow-back-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
+                <Text style={styles.emptyText}>Select a manager</Text>
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
 
       <CustomAlert ref={alertRef} />
