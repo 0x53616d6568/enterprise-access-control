@@ -34,7 +34,8 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
       const usersRes = await api.get(API.USERS);
       const allUsers = usersRes.data.data || [];
       
-      const managerList = allUsers.filter(u => u.access_level === 3);\n      setManagers(managerList);
+      const managerList = allUsers.filter(u => u.access_level === 3);
+      setManagers(managerList);
       setAllUsers(allUsers.filter(u => u.access_level < 3));
     } catch (err) {
       console.error('Failed to fetch data:', err.message);
