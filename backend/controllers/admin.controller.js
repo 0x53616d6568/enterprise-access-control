@@ -411,11 +411,11 @@ const assignTeamToManager = async (req, res, next) => {
       return error(res, 'Manager ID and team member IDs are required', 400);
     }
 
-    // Verify manager exists and has manager role
+    // Verify manager exists and has manager role (access_level = 3)
     const [manager] = await db.query(
       `SELECT u.user_id, r.access_level FROM users u 
        JOIN roles r ON u.role_id = r.role_id 
-       WHERE u.user_id = ? AND r.access_level = 4`,
+       WHERE u.user_id = ? AND r.access_level = 3`,
       [manager_id]
     );
 

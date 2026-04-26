@@ -44,8 +44,8 @@ const getAllUsers = async (req, res, next) => {
   try {
     console.log(`[getAllUsers] User ${req.user.user_id} (access_level: ${req.user.access_level}) requesting users list`);
     
-    // If user is manager (access_level === 3 with manager role), only show their assigned team members
-    if (req.user.access_level === 3 && req.user.role_name === 'Manager') {
+    // If user is manager (access_level === 3), only show their assigned team members
+    if (req.user.access_level === 3) {
       console.log(`[getAllUsers] Manager ${req.user.user_id} - fetching team members`);
       try {
         const [rows] = await db.query(
