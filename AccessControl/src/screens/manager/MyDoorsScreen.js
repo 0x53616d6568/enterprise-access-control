@@ -14,15 +14,15 @@ export default function MyDoorsScreen({ navigation }) {
 
   const fetchManagerDoors = useCallback(async () => {
     try {
-      // For now, just get all doors available in the system
-      // In a full implementation, we would filter by team member access
-      const doorsRes = await api.get(API.DOORS);
-      const allDoors = doorsRes.data.data || [];
+      // Managers see doors assigned to THEM (just like employees see in Quick Access)
+      // Use the same MY_DOORS endpoint that employees use
+      const doorsRes = await api.get(API.MY_DOORS);
+      const managerDoors = doorsRes.data.data || [];
       
-      console.log(`[MyDoors] Loaded ${allDoors.length} doors`);
-      setDoors(allDoors);
+      console.log(`[MyDoors] Manager loaded ${managerDoors.length} assigned doors`);
+      setDoors(managerDoors);
     } catch (err) {
-      console.error('Failed to fetch doors:', err.message);
+      console.error('Failed to fetch manager doors:', err.message);
       setDoors([]);
     } finally {
       setLoading(false);

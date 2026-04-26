@@ -42,8 +42,11 @@ const generateTempPassword = () => {
 // GET /api/users — Admin/Manager only
 const getAllUsers = async (req, res, next) => {
   try {
-    // If user is manager, only show their assigned team members
-    if (req.user.access_level === 4) { // Manager role
+    console.log(`[getAllUsers] User ${req.user.user_id} (access_level: ${req.user.access_level}) requesting users list`);
+    
+    // If user is manager (access_level === 4), only show their assigned team members
+    if (req.user.access_level === 4) {
+      console.log(`[getAllUsers] Manager ${req.user.user_id} - fetching team members`);
       try {
         const [rows] = await db.query(
           `SELECT u.user_id, u.full_name, u.email, u.phone,
@@ -53,20 +56,32 @@ const getAllUsers = async (req, res, next) => {
            FROM users u 
            JOIN roles r ON u.role_id = r.role_id
            LEFT JOIN manager_team_members mtm ON u.user_id = mtm.team_member_id AND mtm.manager_id = ?
-           WHERE mtm.manager_id = ?
+           WHERE mtm.manager_id = ? OR u.user_id = ?
            ORDER BY u.full_name`,
-          [req.user.user_id, req.user.user_id]
+          [req.user.user_id, req.user.user_id, req.user.user_id]
         );
-        console.log(`[Manager Team] Retrieved ${rows.length} team members for manager ${req.user.user_id}`);
+        console.log(`[getAllUsers] Manager ${req.user.user_id} retrieved ${rows.length} team members`);
         return success(res, rows);
       } catch (tableErr) {
-        // If manager_team_members table doesn't exist or query fails, return empty array
-        console.warn(`[Manager Team] Failed to fetch team members (table may not exist):`, tableErr.message);
-        return success(res, [], 'No team members assigned');
+        console.error(`[getAllUsers] Manager team query failed:`, tableErr.message);
+        // If table doesn't exist or query fails, return just the manager (not all users)
+        const [managerRow] = await db.query(
+          `SELECT u.user_id, u.full_name, u.email, u.phone,
+                  u.department, u.avatar_url, u.status,
+                  u.is_first_login, u.last_login,
+                  r.role_id, r.role_name, r.access_level
+           FROM users u
+           JOIN roles r ON u.role_id = r.role_id
+           WHERE u.user_id = ?`,
+          [req.user.user_id]
+        );
+        console.log(`[getAllUsers] Fallback: returning manager only`);
+        return success(res, managerRow);
       }
     }
     
-    // If admin, show all users
+    // If admin (access_level >= 5), show all users
+    console.log(`[getAllUsers] Admin ${req.user.user_id} - fetching all users`);
     const [rows] = await db.query(
       `SELECT u.user_id, u.full_name, u.email, u.phone,
               u.department, u.avatar_url, u.status,
@@ -75,6 +90,7 @@ const getAllUsers = async (req, res, next) => {
        FROM users u JOIN roles r ON u.role_id = r.role_id
        ORDER BY u.full_name`
     );
+    console.log(`[getAllUsers] Admin retrieved ${rows.length} users`);
     return success(res, rows);
   } catch (err) { next(err); }
 };
