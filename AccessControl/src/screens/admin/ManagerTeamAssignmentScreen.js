@@ -38,8 +38,8 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
       console.log(`[Manager Assignment] Retrieved ${allUsers.length} total users`);
       allUsers.forEach(u => console.log(`  - ${u.full_name}: access_level=${u.access_level}`));
       
-      // Filter to get only managers (access_level === 4)
-      const managerList = allUsers.filter(u => u.access_level === 4);
+      // Filter to get only managers (access_level === 3 with Manager role)
+      const managerList = allUsers.filter(u => u.access_level === 3 && u.role_name === 'Manager');
       console.log(`[Manager Assignment] Found ${managerList.length} managers:`, managerList.map(m => `${m.full_name}(${m.access_level})`));
       setManagers(managerList);
 
