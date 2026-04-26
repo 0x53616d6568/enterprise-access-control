@@ -25,6 +25,7 @@ export const API = {
   // Doors
   DOORS:           `${BASE_URL}/doors`,
   DOOR:            (id) => `${BASE_URL}/doors/${id}`,
+  MY_DOORS:        `${BASE_URL}/doors/access/my-doors`,
   DOOR_RULES:      (id) => `${BASE_URL}/doors/${id}/rules`,
 
   // Attendance

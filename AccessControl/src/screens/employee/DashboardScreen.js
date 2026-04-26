@@ -1,425 +1,337 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
+import { mqttTokenService, mqttAccessService } from '../../services/mqttService';
 
 export default function DashboardScreen({ navigation }) {
-  const { user, accessToken, logout } = useAuth();
+  const { user } = useAuth();
   const colors = useThemeColors();
 
   const styles = StyleSheet.create({
-    safe: {
-      flex:            1,
-      backgroundColor: colors.bg,
-    },
-    centered: {
-      flex:            1,
-      backgroundColor: colors.bg,
-      alignItems:      'center',
-      justifyContent:  'center',
-    },
-    container: {
-      paddingHorizontal: 24,
-      paddingTop:        16,
-      paddingBottom:     32,
-    },
-    header: {
-      flexDirection:  'row',
-      justifyContent: 'space-between',
-      alignItems:     'flex-start',
-      marginBottom:   24,
-    },
-    greeting: {
-      color:         colors.textPrimary,
-      fontSize:      22,
-      fontWeight:    '500',
-      letterSpacing: -0.4,
-      marginBottom:  3,
-    },
-    date: {
-      color:    colors.textMuted,
-      fontSize: 13,
-    },
-    notifBtn: {
-      width:           36,
-      height:          36,
-      backgroundColor: colors.bgCard,
-      borderWidth:     1,
-      borderColor:     colors.borderMid,
-      borderRadius:    10,
-      alignItems:      'center',
-      justifyContent:  'center',
-    },
-    notifDot: {
-      position:        'absolute',
-      top:             7,
-      right:           7,
-      width:           7,
-      height:          7,
-      borderRadius:    4,
-      backgroundColor: colors.accent,
-      borderWidth:     1.5,
-      borderColor:     colors.bg,
-    },
-    statusCard: {
-      backgroundColor: colors.bgDeep,
-      borderWidth:     1,
-      borderColor:     colors.accentDark,
-      borderRadius:    16,
-      padding:         16,
-      flexDirection:   'row',
-      alignItems:      'center',
-      justifyContent:  'space-between',
-      marginBottom:    20,
-    },
-    statusLeft: {
-      flexDirection: 'row',
-      alignItems:    'center',
-      gap:           12,
-    },
-    statusIcon: {
-      width:           40,
-      height:          40,
-      backgroundColor: colors.accent,
-      borderRadius:    12,
-      alignItems:      'center',
-      justifyContent:  'center',
-    },
-    statusLabel: {
-      color:         colors.accentText,
-      fontSize:      11,
-      letterSpacing: 0.3,
-      marginBottom:  2,
-    },
-    statusValue: {
-      color:      colors.textPrimary,
-      fontSize:   15,
-      fontWeight: '500',
-    },
-    statusRight: {
-      alignItems: 'flex-end',
-    },
-    statusTime: {
-      color:    colors.textMuted,
-      fontSize: 12,
-    },
-    statusActive: {
-      color:    colors.success,
-      fontSize: 11,
-      marginTop: 2,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      gap:           10,
-      marginBottom:  24,
-    },
-    statCard: {
-      flex:            1,
-      backgroundColor: colors.bgCard,
-      borderWidth:     1,
-      borderColor:     colors.border,
-      borderRadius:    14,
-      padding:         14,
-    },
-    statLabel: {
-      color:        colors.textMuted,
-      fontSize:     11,
-      marginBottom: 6,
-    },
-    statValue: {
-      color:         colors.textPrimary,
-      fontSize:      20,
-      fontWeight:    '500',
-      letterSpacing: -0.5,
-    },
-    statSub: {
-      fontSize:  11,
-      marginTop: 3,
-    },
-    sectionHeader: {
-      flexDirection:  'row',
-      justifyContent: 'space-between',
-      alignItems:     'center',
-      marginBottom:   12,
-    },
-    sectionTitle: {
-      color:         colors.textSecondary,
-      fontSize:      11,
-      letterSpacing: 0.5,
-      textTransform: 'uppercase',
-    },
-    sectionLink: {
-      color:    colors.accent,
-      fontSize: 12,
-    },
-    emptyCard: {
-      backgroundColor: colors.bgCard,
-      borderWidth:     1,
-      borderColor:     colors.border,
-      borderRadius:    14,
-      padding:         24,
-      alignItems:      'center',
-      gap:             8,
-    },
-    emptyText: {
-      color:    colors.textMuted,
-      fontSize: 13,
-    },
-    logItem: {
-      flexDirection:  'row',
-      alignItems:     'center',
-      gap:            12,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.bgCard,
-    },
-    logIcon: {
-      width:          36,
-      height:         36,
-      borderRadius:   10,
-      alignItems:     'center',
-      justifyContent: 'center',
-    },
-    logIconGranted: {
-      backgroundColor: colors.successBg,
-      borderWidth:     1,
-      borderColor:     colors.successBorder,
-    },
-    logIconDenied: {
-      backgroundColor: colors.dangerBg,
-      borderWidth:     1,
-      borderColor:     colors.dangerBorder,
-    },
-    logInfo: {
-      flex: 1,
-    },
-    logDoor: {
-      color:        colors.textPrimary,
-      fontSize:     13,
-      fontWeight:   '500',
-      marginBottom: 2,
-    },
-    logMeta: {
-      color:    colors.textMuted,
-      fontSize: 11,
-    },
-    logBadge: {
-      paddingHorizontal: 8,
-      paddingVertical:   3,
-      borderRadius:      6,
-      borderWidth:       1,
-    },
-    badgeGranted: {
-      backgroundColor: colors.successBg,
-      borderColor:     colors.successBorder,
-    },
-    badgeDenied: {
-      backgroundColor: colors.dangerBg,
-      borderColor:     colors.dangerBorder,
-    },
-    logBadgeText: {
-      fontSize:   11,
-      fontWeight: '500',
-    },
+    safe: { flex: 1, backgroundColor: colors.bg },
+    container: { padding: 24 },
+    centered: { flex: 1, justifyContent: 'center', backgroundColor: colors.bg },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    rowBC: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    greeting: { color: colors.textPrimary, fontSize: 22, fontWeight: '600', marginBottom: 4 },
+    metaText: { color: colors.textMuted, fontSize: 12 },
+    iconBtn: { width: 40, height: 40, backgroundColor: colors.bgCard, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
+    notifDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.bg },
+    statusCard: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.accentDark, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+    statusIcon: { width: 38, height: 38, backgroundColor: colors.accent, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    accentMeta: { color: colors.accentText, fontSize: 10, fontWeight: '600', marginBottom: 2 },
+    statusValue: { color: colors.textPrimary, fontSize: 15, fontWeight: '500' },
+    statsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+    statCard: { flex: 1, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14 },
+    statValue: { color: colors.textPrimary, fontSize: 18, fontWeight: '600', marginVertical: 4 },
+    statSub: { fontSize: 11 },
+    sectionTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+    link: { color: colors.accent, fontSize: 12 },
+    logItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.bgCard },
+    logIcon: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    logDoor: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
+    badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
+    // Quick Access Section
+    quickAccessContainer: { marginBottom: 24 },
+    quickAccessGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    quickAccessBtn: { flex: 1, minWidth: '30%', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, alignItems: 'center', gap: 8 },
+    quickAccessBtnActive: { borderColor: colors.accent, backgroundColor: colors.accentBg },
+    quickAccessIcon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+    quickAccessText: { fontSize: 12, fontWeight: '500', textAlign: 'center' },
+    doorRequestCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14, marginBottom: 12 },
+    doorRequestHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+    doorRequestName: { flex: 1, color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
+    doorAccessLevel: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.accentBg },
+    doorAccessLevelText: { fontSize: 10, fontWeight: '600', color: colors.accent },
+    requestAccessBtn: { backgroundColor: colors.accent, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' },
+    requestAccessBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+    requestAccessBtnDisabled: { backgroundColor: colors.textMuted, opacity: 0.5 },
   });
 
-  const [attendance,     setAttendance]     = useState([]);
-  const [logs,           setLogs]           = useState([]);
-  const [requests,       setRequests]       = useState([]);
-  const [notifications,  setNotifications]  = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [refreshing,     setRefreshing]     = useState(false);
+  const StatCard = ({ label, value, sub, color }) => (
+    <View style={styles.statCard}>
+      <Text style={styles.metaText}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={[styles.statSub, { color }]}>{sub}</Text>
+    </View>
+  );
 
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  const [data, setData] = useState({ att: [], logs: [], reqs: [], notifs: [], doors: [], tokens: [] });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [requestingDoorId, setRequestingDoorId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [attRes, logsRes, reqRes, notifRes] = await Promise.all([
-        axios.get(API.MY_ATTENDANCE, { headers }),
-        axios.get(API.MY_LOGS,       { headers }),
-        axios.get(API.MY_REQUESTS,   { headers }),
-        axios.get(API.NOTIFICATIONS, { headers }),
+      const [a, l, r, n, d, t] = await Promise.all([
+        api.get(API.MY_ATTENDANCE), 
+        api.get(API.MY_LOGS),
+        api.get(API.MY_REQUESTS), 
+        api.get(API.NOTIFICATIONS),
+        api.get(API.MY_DOORS),
+        mqttTokenService.getTokens().catch(() => [])
       ]);
-      setAttendance(attRes.data.data   || []);
-      setLogs(logsRes.data.data        || []);
-      setRequests(reqRes.data.data     || []);
-      setNotifications(notifRes.data.data || []);
+      
+      let doors = d.data.data || [];
+      
+      // Debug log to help identify issues
+      console.log('Assigned Doors API Response:', { statusCode: d.status, data: doors, fullResponse: d });
+      
+      // Ensure doors array is properly formatted
+      if (!Array.isArray(doors)) {
+        console.warn('Doors is not an array:', typeof doors, doors);
+        doors = [];
+      }
+      
+      setData({ 
+        att: a.data.data || [], 
+        logs: l.data.data || [], 
+        reqs: r.data.data || [], 
+        notifs: n.data.data || [], 
+        doors: doors,
+        tokens: t || []
+      });
     } catch (err) {
-      console.log('Dashboard fetch error:', err.message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error('Dashboard fetch error:', err.message);
+      // Fallback to empty data on error
+      setData({ att: [], logs: [], reqs: [], notifs: [], doors: [], tokens: [] });
+    } finally { 
+      setLoading(false); 
+      setRefreshing(false); 
     }
-  }, [accessToken]);
+  }, []);
+
+  /**
+   * Request access to a specific door
+   * Uses MQTT token to broadcast request to nearest door
+   */
+  const handleRequestAccess = async (door) => {
+    // Check access level
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    // Check if user has active tokens
+    if (!data.tokens || data.tokens.length === 0) {
+      Alert.alert('No Tokens', 'Generating access token...', [
+        { text: 'OK', style: 'default' }
+      ]);
+      return;
+    }
+
+    const doorId = door.door_id || door.id;
+    setRequestingDoorId(doorId);
+
+    try {
+      // Use first available token
+      const token = data.tokens[0];
+      
+      // Request access
+      const response = await mqttAccessService.requestDoorAccess(doorId, token.id);
+      
+      // Show result
+      if (response.status === 'GRANTED') {
+        Alert.alert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`);
+      } else if (response.status === 'FACE_AUTH_REQUIRED') {
+        Alert.alert('Face Authentication Required', 'Please proceed to face recognition');
+      } else if (response.status === 'PENDING') {
+        Alert.alert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`);
+      } else {
+        Alert.alert('Access Denied', response.message || 'Your request was denied');
+      }
+
+      // Refresh data to update access logs
+      setTimeout(() => fetchData(), 2000);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to request access');
+    } finally {
+      setRequestingDoorId(null);
+    }
+  };
+
+  /**
+   * Generate new MQTT token if none exists
+   */
+  const generateToken = async () => {
+    try {
+      const newToken = await mqttTokenService.generateToken(`Mobile-${user.full_name}`);
+      setData(prev => ({
+        ...prev,
+        tokens: [...prev.tokens, newToken]
+      }));
+      Alert.alert('Success', 'MQTT token generated');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to generate token');
+    }
+  };
+
+  /**
+   * Auto-generate MQTT token on mount if user doesn't have one
+   */
+  useEffect(() => {
+    const autoGenerateTokenIfNeeded = async () => {
+      try {
+        // Only auto-generate if user is logged in and has no tokens
+        if (user && data.tokens.length === 0 && !loading) {
+          const newToken = await mqttTokenService.generateToken(`Mobile-${user.full_name}`);
+          setData(prev => ({
+            ...prev,
+            tokens: [newToken]
+          }));
+        }
+      } catch (error) {
+        // Silently fail - user can manually generate if needed
+        console.log('Auto-token generation skipped:', error.message);
+      }
+    };
+
+    // Delay auto-generation to let initial fetch complete
+    const timer = setTimeout(autoGenerateTokenIfNeeded, 500);
+    return () => clearTimeout(timer);
+  }, [user, loading, data.tokens.length]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const onRefresh = () => { setRefreshing(true); fetchData(); };
+  const today = data.att.find(a => new Date(a.check_in).toDateString() === new Date().toDateString());
+  const weekHrs = data.att.filter(a => new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
+  const unread = data.notifs.filter(n => !n.is_read).length;
 
-  // Helpers
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  const firstName = user?.full_name?.split(' ')[0] || 'there';
-
-  const todayAttendance = attendance.find(a => {
-    const d = new Date(a.check_in);
-    const today = new Date();
-    return d.toDateString() === today.toDateString();
-  });
-
-  const weekHours = attendance
-    .filter(a => {
-      const d = new Date(a.check_in);
-      const now = new Date();
-      const weekAgo = new Date(now.setDate(now.getDate() - 7));
-      return d >= weekAgo;
-    })
-    .reduce((sum, a) => sum + (a.total_hours || 0), 0)
-    .toFixed(1);
-
-  const pendingRequests = requests.filter(r => r.status === 'PENDING').length;
-  const unreadNotifs    = notifications.filter(n => !n.is_read).length;
-  const recentLogs      = logs.slice(0, 5);
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
+      <ScrollView contentContainerStyle={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchData} tintColor={colors.accent} />}>
+        <View style={styles.rowBC}>
           <View>
-            <Text style={styles.greeting}>{getGreeting()}, {firstName}</Text>
-            <Text style={styles.date}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </Text>
+            <Text style={styles.greeting}>Good {new Date().getHours() < 12 ? 'morning' : 'day'}, {user?.full_name?.split(' ')[0]}</Text>
+            <Text style={styles.metaText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</Text>
           </View>
-          <TouchableOpacity style={styles.notifBtn} onPress={() => navigation.navigate("Notifications")}>
-            <Ionicons name="notifications-outline" size={18} color={colors.textSecondary} />
-            {unreadNotifs > 0 && <View style={styles.notifDot} />}
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
+            <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+            {unread > 0 && <View style={styles.notifDot} />}
           </TouchableOpacity>
         </View>
 
-        {/* Attendance status card */}
         <View style={styles.statusCard}>
-          <View style={styles.statusLeft}>
-            <View style={styles.statusIcon}>
-              <Ionicons name="person-outline" size={18} color="#fff" />
-            </View>
+          <View style={styles.row}>
+            <View style={styles.statusIcon}><Ionicons name="person-outline" size={18} color="#fff" /></View>
             <View>
-              <Text style={styles.statusLabel}>ATTENDANCE STATUS</Text>
-              <Text style={styles.statusValue}>
-                {todayAttendance
-                  ? todayAttendance.check_out ? 'Checked out' : 'Checked in'
-                  : 'Not checked in'}
-              </Text>
+              <Text style={styles.accentMeta}>ATTENDANCE STATUS</Text>
+              <Text style={styles.statusValue}>{today ? (today.check_out ? 'Checked out' : 'Checked in') : 'Not checked in'}</Text>
             </View>
           </View>
-          <View style={styles.statusRight}>
-            <Text style={styles.statusTime}>
-              {todayAttendance
-                ? new Date(todayAttendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '--:--'}
-            </Text>
-            {todayAttendance && !todayAttendance.check_out && (
-              <Text style={styles.statusActive}>● Active</Text>
+          <Text style={styles.metaText}>{today ? new Date(today.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <StatCard label="This week" value={`${weekHrs}h`} sub="Logged" color={colors.success} />
+          <StatCard label="Requests" value={data.reqs.filter(r => r.status === 'PENDING').length} sub="Pending" color={colors.warning} />
+          <StatCard label="Alerts" value={unread} sub="Unread" color={colors.accent} />
+        </View>
+
+        {/* Quick Access Section - Request Door Access */}
+        <View style={styles.quickAccessContainer}>
+          <View style={styles.rowBC}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="folder-open" size={14} color={colors.textSecondary} />
+              <Text style={styles.sectionTitle}>Assigned Doors</Text>
+            </View>
+            {data.tokens.length > 0 && (
+              <TouchableOpacity onPress={() => Alert.alert('Active Tokens', `You have ${data.tokens.length} active token${data.tokens.length !== 1 ? 's' : ''} for door access requests`)}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="key" size={12} color={colors.accent} />
+                  <Text style={[styles.link, { fontSize: 11 }]}>{data.tokens.length} Token{data.tokens.length !== 1 ? 's' : ''}</Text>
+                </View>
+              </TouchableOpacity>
             )}
           </View>
+
+          {data.doors && data.doors.length > 0 ? (
+            <>
+              {/* Assigned Doors List */}
+              {data.doors.map((door) => {
+                return (
+                  <View key={door.door_id || door.id} style={styles.doorRequestCard}>
+                    <View style={styles.doorRequestHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.doorRequestName}>{door.door_name || door.name || 'Door'}</Text>
+                        <Text style={styles.metaText}>{door.location || 'Unknown location'}</Text>
+                      </View>
+                      <View style={[styles.doorAccessLevel, { backgroundColor: colors.accentBg }]}>
+                        <Text style={styles.doorAccessLevelText}>
+                          {door.security_level || 'Standard'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity 
+                      style={[
+                        styles.requestAccessBtn,
+                        requestingDoorId === (door.door_id || door.id) && { opacity: 0.7 }
+                      ]}
+                      onPress={() => handleRequestAccess(door)}
+                      disabled={requestingDoorId === (door.door_id || door.id)}
+                    >
+                      {requestingDoorId === (door.door_id || door.id) ? (
+                        <>
+                          <ActivityIndicator color="#fff" size="small" />
+                          <Text style={styles.requestAccessBtnText}>Requesting...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons name="lock-open" size={14} color="#fff" />
+                          <Text style={styles.requestAccessBtnText}>Request Access</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </>
+          ) : (
+            <View style={{ backgroundColor: colors.bgCard, padding: 20, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.accentBg, borderStyle: 'dashed' }}>
+              <Ionicons name="information-circle-outline" size={32} color={colors.accent} style={{ marginBottom: 10 }} />
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '500', marginBottom: 4 }}>No Doors Assigned</Text>
+              <Text style={styles.metaText}>Your account doesn't have any door access</Text>
+              <Text style={[styles.metaText, { marginTop: 12, fontStyle: 'italic', fontSize: 10 }]}>Please contact your administrator to assign doors to your account</Text>
+            </View>
+          )}
         </View>
 
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>This week</Text>
-            <Text style={styles.statValue}>{weekHours}h</Text>
-            <Text style={[styles.statSub, { color: colors.success }]}>Logged</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Requests</Text>
-            <Text style={styles.statValue}>{pendingRequests}</Text>
-            <Text style={[styles.statSub, { color: colors.warning }]}>
-              {pendingRequests > 0 ? 'Pending' : 'All clear'}
-            </Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Notifications</Text>
-            <Text style={styles.statValue}>{unreadNotifs}</Text>
-            <Text style={[styles.statSub, { color: colors.accent }]}>
-              {unreadNotifs > 0 ? 'Unread' : 'All read'}
-            </Text>
-          </View>
-        </View>
-
-        {/* Recent access logs */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent access</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Logs")}>
-            <Text style={styles.sectionLink}>See all</Text>
+        <View style={styles.rowBC}>
+          <Text style={styles.sectionTitle}>Recent Access</Text>
+          <TouchableOpacity 
+            onPress={() => {
+              // Navigate to AllLogs - DashboardScreen is in HomeStack for employees and can navigate directly
+              navigation.navigate('AllLogs');
+            }}
+          >
+            <Text style={styles.link}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {recentLogs.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Ionicons name="lock-open-outline" size={24} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No access logs yet</Text>
-          </View>
-        ) : (
-          recentLogs.map((log, i) => (
-            <View key={i} style={styles.logItem}>
-              <View style={[
-                styles.logIcon,
-                log.result === 'GRANTED' ? styles.logIconGranted : styles.logIconDenied
-              ]}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={14}
-                  color={log.result === 'GRANTED' ? colors.success : colors.danger}
-                />
-              </View>
-              <View style={styles.logInfo}>
-                <Text style={styles.logDoor}>{log.door_name || 'Unknown door'}</Text>
-                <Text style={styles.logMeta}>
-                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {' · '}{log.method || 'BLE'}
-                </Text>
-              </View>
-              <View style={[
-                styles.logBadge,
-                log.result === 'GRANTED' ? styles.badgeGranted : styles.badgeDenied
-              ]}>
-                <Text style={[
-                  styles.logBadgeText,
-                  { color: log.result === 'GRANTED' ? colors.success : colors.danger }
-                ]}>
-                  {log.result === 'GRANTED' ? 'Granted' : 'Denied'}
-                </Text>
-              </View>
+        {data.logs.slice(0, 5).map((log, i) => (
+          <View key={i} style={styles.logItem}>
+            <View style={[styles.logIcon, { backgroundColor: log.result === 'GRANTED' ? colors.successBg : colors.dangerBg }]}>
+              <Ionicons name="lock-closed-outline" size={14} color={log.result === 'GRANTED' ? colors.success : colors.danger} />
             </View>
-          ))
-        )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.logDoor}>{log.door_name || 'Door'}</Text>
+              <Text style={styles.metaText}>{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {log.method || 'MQTT'}</Text>
+            </View>
+            <View style={[styles.badge, { borderColor: log.result === 'GRANTED' ? colors.successBorder : colors.dangerBorder }]}>
+              <Text style={{ fontSize: 10, color: log.result === 'GRANTED' ? colors.success : colors.danger }}>{log.result}</Text>
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
+
