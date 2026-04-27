@@ -108,6 +108,5 @@ const requestDoorAccess = async (req, res, next) => {
     return success(res, { request_id: result.insertId }, 'Access request submitted', 201);
   } catch (err) { next(err); }
 };
-};
 
 module.exports = { getMyRequests, getAllRequests, createRequest, requestDoorAccess, reviewRequest };
