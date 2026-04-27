@@ -129,23 +129,29 @@ export default function DashboardScreen({ navigation }) {
     }
   }, [hasInitialized, fetchData]);
 
-  // Auto-generate MQTT token after initial fetch
+  // Auto-generate MQTT token after initial fetch (only once)
   useEffect(() => {
+    let isMounted = true;
+    
     if (hasInitialized && !loading && user && data.tokens.length === 0) {
       const autoGenerateToken = async () => {
         try {
           const newToken = await mqttTokenService.generateToken(`Mobile-${user.full_name}`);
-          setData(prev => ({
-            ...prev,
-            tokens: [newToken]
-          }));
+          if (isMounted) {
+            setData(prev => ({
+              ...prev,
+              tokens: [newToken]
+            }));
+          }
         } catch (error) {
           console.log('Auto-token generation skipped:', error.message);
         }
       };
       autoGenerateToken();
     }
-  }, [hasInitialized, loading, user, data.tokens.length]);
+    
+    return () => { isMounted = false; };
+  }, [hasInitialized, loading, user?.user_id]);
 
   // Handle door access requests
   const handleRequestAccess = async (door) => {
