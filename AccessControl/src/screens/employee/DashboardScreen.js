@@ -130,6 +130,9 @@ export default function DashboardScreen({ navigation }) {
   }, [hasInitialized, fetchData]);
 
   // Auto-generate MQTT token after initial fetch (only once)
+  // DISABLED: Users should generate tokens manually from MQTT Tokens screen
+  // Automatic generation was causing multiple tokens to be created
+  /*
   useEffect(() => {
     let isMounted = true;
     
@@ -152,6 +155,7 @@ export default function DashboardScreen({ navigation }) {
     
     return () => { isMounted = false; };
   }, [hasInitialized, loading, user?.user_id]);
+  */
 
   // Handle door access requests
   const handleRequestAccess = async (door) => {
@@ -160,28 +164,20 @@ export default function DashboardScreen({ navigation }) {
       return;
     }
 
-    if (!data.tokens || data.tokens.length === 0) {
-      showAlert('No Tokens', 'Generating access token...', 'warning');
-      return;
-    }
-
     const doorId = door.door_id || door.id;
+    const doorName = door.door_name || door.name;
     setRequestingDoorId(doorId);
 
     try {
-      const token = data.tokens[0];
-      const response = await mqttAccessService.requestDoorAccess(doorId, token.id);
+      // Use new simplified endpoint (no time/day validation)
+      await mqttAccessService.requestAccess({
+        door_id: doorId,
+        door_name: doorName,
+        user_id: user.user_id,
+        user_name: user.full_name
+      });
       
-      if (response.status === 'GRANTED') {
-        showAlert('✓ Access Granted', `${door.door_name || door.name} is unlocking...`, 'success');
-      } else if (response.status === 'FACE_AUTH_REQUIRED') {
-        showAlert('Face Authentication Required', 'Please proceed to face recognition', 'info');
-      } else if (response.status === 'PENDING') {
-        showAlert('Request Pending', `Waiting for approval from ${door.door_name || door.name}...`, 'info');
-      } else {
-        showAlert('Access Denied', response.message || 'Your request was denied', 'error');
-      }
-
+      showAlert('Success', `Access request sent for ${doorName}`, 'success');
       setTimeout(() => fetchData(), 2000);
     } catch (error) {
       showAlert('Error', error.message || 'Failed to request access', 'error');
