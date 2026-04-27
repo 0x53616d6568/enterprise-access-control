@@ -3,12 +3,13 @@ const router  = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const {
   getMyRequests, getAllRequests,
-  createRequest, reviewRequest
+  createRequest, requestDoorAccess, reviewRequest
 } = require('../controllers/request.controller');
 
-router.get('/me',          authenticate, getMyRequests);
-router.get('/',            authenticate, authorize(3), getAllRequests);
-router.post('/',           authenticate, createRequest);
-router.patch('/:id/review', authenticate, authorize(3), reviewRequest);
+router.get('/me',               authenticate, getMyRequests);
+router.get('/',                 authenticate, authorize(3), getAllRequests);
+router.post('/',                authenticate, createRequest);
+router.post('/door-access',     authenticate, requestDoorAccess);  // Simplified door access request
+router.patch('/:id/review',     authenticate, authorize(3), reviewRequest);
 
 module.exports = router;

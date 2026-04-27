@@ -74,4 +74,40 @@ const reviewRequest = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getMyRequests, getAllRequests, createRequest, reviewRequest };
+/**
+ * POST /api/requests/door-access
+ * Simple door access request - employee requests access without time/day validation
+ * Manager reviews request and decides whether to grant access
+ */
+const requestDoorAccess = async (req, res, next) => {
+  try {
+    const userId = req.user.user_id;
+    const { door_id, door_name } = req.body;
+    
+    if (!door_id) return error(res, 'door_id is required', 400);
+    
+    // Check door exists
+    const [doors] = await db.query(
+      `SELECT door_id, door_name FROM doors WHERE door_id = ?`,
+      [door_id]
+    );
+    
+    if (!doors.length) {
+      return error(res, 'Door not found', 404);
+    }
+    
+    // Create access request
+    const description = `Access request for door: ${door_name || doors[0].door_name}`;
+    const [result] = await db.query(
+      `INSERT INTO requests (user_id, type, description) VALUES (?, ?, ?)`,
+      [userId, 'ACCESS_REQUEST', description]
+    );
+    
+    console.log(`[Door Access] Request created for user ${userId} requesting door ${door_id}`);
+    
+    return success(res, { request_id: result.insertId }, 'Access request submitted', 201);
+  } catch (err) { next(err); }
+};
+};
+
+module.exports = { getMyRequests, getAllRequests, createRequest, requestDoorAccess, reviewRequest };

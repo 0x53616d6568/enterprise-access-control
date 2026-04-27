@@ -62,24 +62,23 @@ export const mqttAccessService = {
   /**
    * Request access to a door - Simple endpoint for quick access requests
    * Creates an access request that managers can approve/deny
-   * Skips MQTT token validation for simplified flow
+   * Skips time/day validation - manager reviews the request
    * 
    * @param {object} accessData - { door_id, door_name, user_id, user_name }
    * @returns {Promise<object>} { request_id, status }
    */
   async requestAccess(accessData) {
     try {
-      const { door_id, door_name, user_id, user_name } = accessData;
+      const { door_id, door_name } = accessData;
       
       if (!door_id) {
         throw new Error('door_id is required');
       }
 
-      // Use simple request endpoint (doesn't require MQTT token validation)
-      const response = await api.post(API.MY_REQUESTS, {
-        type: 'ACCESS_REQUEST',
-        description: `Access request for door: ${door_name || 'Unknown'}`,
-        door_id: door_id
+      // Use dedicated door-access endpoint (no time/day validation, manager reviews)
+      const response = await api.post(`${API.MY_REQUESTS}/door-access`, {
+        door_id: door_id,
+        door_name: door_name || 'Unknown Door'
       });
 
       console.log('[Access] Request sent:', response.data);
