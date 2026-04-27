@@ -60,6 +60,34 @@ export const mqttTokenService = {
 // Door access request management (Prompted behavior)
 export const mqttAccessService = {
   /**
+   * Request access to a door - Simple endpoint for quick access requests
+   * Creates an access request that managers can approve/deny
+   * 
+   * @param {object} accessData - { door_id, door_name, user_id, user_name }
+   * @returns {Promise<object>} { request_id, status }
+   */
+  async requestAccess(accessData) {
+    try {
+      const { door_id, door_name, user_id, user_name } = accessData;
+      
+      if (!door_id) {
+        throw new Error('door_id is required');
+      }
+
+      // Create a request with the door context
+      const response = await api.post(API.MY_REQUESTS, {
+        type: 'ACCESS_REQUEST',
+        description: `Access request for door: ${door_name || 'Unknown'}`,
+        door_id: door_id
+      });
+
+      return response.data.data || response.data;
+    } catch (err) {
+      throw new Error(err?.response?.data?.message || 'Failed to request access');
+    }
+  },
+
+  /**
    * Request access to a door (user presses button)
    * Returns requestId and indicates if face auth is required
    */

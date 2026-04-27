@@ -33,11 +33,13 @@ const getAllRequests = async (req, res, next) => {
 
 const createRequest = async (req, res, next) => {
   try {
-    const { type, description } = req.body;
+    const { type, description, door_id } = req.body;
     if (!type) return error(res, 'Request type is required', 400);
+    
+    // For ACCESS_REQUEST type, door_id is optional but can be included for context
     const [result] = await db.query(
-      `INSERT INTO requests (user_id, type, description) VALUES (?, ?, ?)`,
-      [req.user.user_id, type, description]
+      `INSERT INTO requests (user_id, type, description, door_id) VALUES (?, ?, ?, ?)`,
+      [req.user.user_id, type, description, door_id || null]
     );
     return success(res, { request_id: result.insertId }, 'Request submitted', 201);
   } catch (err) { next(err); }
