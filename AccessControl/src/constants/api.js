@@ -73,6 +73,10 @@ export const API = {
   MQTT_REQUEST:    `${BASE_URL}/mqtt/request`,
   MQTT_REQUEST_HISTORY: `${BASE_URL}/mqtt/request-history`,
 
+  // Virtual Door (Testing)
+  VIRTUAL_DOOR_STATUS: `${BASE_URL}/virtual-door/status`,
+  VIRTUAL_DOOR_UNLOCK: `${BASE_URL}/virtual-door/unlock`,
+
   // Face Recognition (via Backend)
   FACE_ENROLL:     `${BASE_URL}/face/enroll`,
   FACE_RECOGNIZE:  `${BASE_URL}/face/recognize`,

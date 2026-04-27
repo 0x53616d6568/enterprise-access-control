@@ -16,6 +16,7 @@ const preferencesRoutes  = require('./routes/preferences.routes');
 const adminRoutes        = require('./routes/admin.routes');
 const faceRoutes         = require('./routes/face.routes');
 const mqttRoutes         = require('./routes/mqtt.routes');
+const virtualDoorRoutes  = require('./routes/virtualDoor.routes');
 
 const app = express();
 
@@ -25,19 +26,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ── Routes ────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes);
-app.use('/api/users',         userRoutes);
-app.use('/api/doors',         doorRoutes);
-app.use('/api/attendance',    attendanceRoutes);
-app.use('/api/requests',      requestRoutes);
-app.use('/api/visitors',      visitorRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/logs',          logsRoutes);
-app.use('/api/pi',            piRoutes);
-app.use('/api/preferences',   preferencesRoutes);
-app.use('/api/admin',         adminRoutes);  // Admin endpoints for token management
-app.use('/api/face',          faceRoutes);   // Face recognition endpoints
-app.use('/api/mqtt',          mqttRoutes);   // MQTT-based door access endpoints
+app.use('/api/auth',           authRoutes);
+app.use('/api/users',          userRoutes);
+app.use('/api/doors',          doorRoutes);
+app.use('/api/attendance',     attendanceRoutes);
+app.use('/api/requests',       requestRoutes);
+app.use('/api/visitors',       visitorRoutes);
+app.use('/api/notifications',  notificationRoutes);
+app.use('/api/logs',           logsRoutes);
+app.use('/api/pi',             piRoutes);
+app.use('/api/preferences',    preferencesRoutes);
+app.use('/api/admin',          adminRoutes);  // Admin endpoints for token management
+app.use('/api/face',           faceRoutes);   // Face recognition endpoints
+app.use('/api/mqtt',           mqttRoutes);   // MQTT-based door access endpoints
+app.use('/api/virtual-door',   virtualDoorRoutes);  // Virtual door for testing
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -51,6 +53,13 @@ app.use((req, res) => {
 
 // ── Global error handler ──────────────────────────────────
 app.use(errorHandler);
+
+// ── Initialize Virtual Door ──────────────────────────────
+const { initializeVirtualDoor } = require('./services/virtualDoorService');
+initializeVirtualDoor().catch(err => {
+  console.warn('⚠️ Virtual door initialization failed:', err.message);
+  // Don't fail server startup if virtual door fails
+});
 
 // ── Start ─────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
