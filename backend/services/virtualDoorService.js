@@ -17,15 +17,17 @@ let virtualDoorState = {
  */
 const initializeVirtualDoor = async () => {
   try {
-    // Connect to HiveMQ as a "door device"
-    const brokerUrl = process.env.MQTT_BROKER || 'mqtt://broker.hivemq.com:1883';
+    // Connect to HiveMQ Cloud as a "door device"
+    // Uses SSL/TLS on port 8883
+    const brokerUrl = process.env.MQTT_BROKER || 'mqtts://bb9f7b883ac247ceb390c4c532330999.s1.eu.hivemq.cloud:8883';
     
     mqttClient = mqtt.connect(brokerUrl, {
-      username: process.env.MQTT_USER,
-      password: process.env.MQTT_PASSWORD,
+      username: process.env.MQTT_USER || 'sameh',
+      password: process.env.MQTT_PASSWORD || 'Samehsameh1020',
       clientId: `virtual-door-${Date.now()}`,
       clean: true,
-      reconnectPeriod: 5000
+      reconnectPeriod: 5000,
+      rejectUnauthorized: false  // For development/testing
     });
 
     mqttClient.on('connect', () => {
