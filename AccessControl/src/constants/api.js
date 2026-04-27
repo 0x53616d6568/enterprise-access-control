@@ -34,9 +34,10 @@ export const API = {
   ALL_ATTENDANCE:  `${BASE_URL}/attendance`,
 
   // Requests
-  MY_REQUESTS:     `${BASE_URL}/requests/me`,
-  ALL_REQUESTS:    `${BASE_URL}/requests`,
-  REVIEW_REQUEST:  (id) => `${BASE_URL}/requests/${id}/review`,
+  MY_REQUESTS:           `${BASE_URL}/requests/me`,
+  ALL_REQUESTS:          `${BASE_URL}/requests`,
+  DOOR_ACCESS_REQUEST:   `${BASE_URL}/requests/door-access`,
+  REVIEW_REQUEST:        (id) => `${BASE_URL}/requests/${id}/review`,
 
   // Visitors
   MY_VISITORS:     `${BASE_URL}/visitors/me`,

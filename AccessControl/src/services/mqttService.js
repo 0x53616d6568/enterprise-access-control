@@ -76,7 +76,7 @@ export const mqttAccessService = {
       }
 
       // Use dedicated door-access endpoint (no time/day validation, manager reviews)
-      const response = await api.post(`${API.MY_REQUESTS}/door-access`, {
+      const response = await api.post(API.DOOR_ACCESS_REQUEST, {
         door_id: door_id,
         door_name: door_name || 'Unknown Door'
       });
