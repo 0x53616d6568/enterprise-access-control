@@ -5,6 +5,7 @@ const mqtt = require('mqtt');
 // Shared MQTT client for publishing access requests
 let mqttAccessClient = null;
 let mqttClientReady = false;
+let mqttConnectionAttempts = 0;
 
 /**
  * Get or create MQTT client for publishing access requests
@@ -16,36 +17,45 @@ const getMQTTClient = () => {
 
   // Create new client
   const brokerUrl = process.env.MQTT_BROKER || 'mqtts://bb9f7b883ac247ceb390c4c532330999.s1.eu.hivemq.cloud:8883';
+  const username = process.env.MQTT_USER || 'sameh';
   
-  console.log(`[MQTT] Connecting to broker: ${brokerUrl.replace(/:.*/, ':****')}`);
+  console.log(`\n[MQTT] ========================================`);
+  console.log(`[MQTT] Initializing MQTT Client`);
+  console.log(`[MQTT] Broker: ${brokerUrl}`);
+  console.log(`[MQTT] Username: ${username}`);
+  console.log(`[MQTT] ========================================\n`);
   
   mqttAccessClient = mqtt.connect(brokerUrl, {
-    username: process.env.MQTT_USER || 'sameh',
+    username: username,
     password: process.env.MQTT_PASSWORD || 'Samehsameh1020',
     clientId: `access-request-${Date.now()}`,
     clean: true,
     reconnectPeriod: 5000,
     rejectUnauthorized: false,
-    connectTimeout: 10000
+    connectTimeout: 10000,
+    keepalive: 30
   });
 
   mqttAccessClient.on('connect', () => {
-    console.log('✅ [MQTT] Request MQTT client connected and ready');
+    console.log('✅ [MQTT] Successfully connected to broker');
     mqttClientReady = true;
   });
 
   mqttAccessClient.on('reconnect', () => {
-    console.log('🔄 [MQTT] Request MQTT client reconnecting...');
+    mqttConnectionAttempts++;
+    console.log(`🔄 [MQTT] Reconnecting (attempt ${mqttConnectionAttempts})...`);
     mqttClientReady = false;
   });
 
   mqttAccessClient.on('error', (err) => {
-    console.error('❌ [MQTT] Request MQTT error:', err.message);
+    console.error('❌ [MQTT] Connection error:', err.message);
+    console.error('   Error code:', err.code);
+    console.error('   Error stack:', err.stack);
     mqttClientReady = false;
   });
 
   mqttAccessClient.on('disconnect', () => {
-    console.log('⚠️  [MQTT] Request MQTT disconnected');
+    console.log('⚠️  [MQTT] Disconnected from broker');
     mqttClientReady = false;
   });
 
@@ -53,32 +63,60 @@ const getMQTTClient = () => {
 };
 
 /**
- * Publish access request to MQTT with retry logic
+ * Wait for MQTT client to be ready with timeout
+ */
+const waitForMQTTReady = async (maxWaitMs = 5000) => {
+  const startTime = Date.now();
+  
+  while (!mqttClientReady && (Date.now() - startTime) < maxWaitMs) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  if (!mqttClientReady) {
+    console.warn(`⏱️  [MQTT] Timeout waiting for connection (waited ${Date.now() - startTime}ms)`);
+  }
+  
+  return mqttClientReady;
+};
+
+/**
+ * Publish access request to MQTT with connection wait
  */
 const publishAccessRequest = async (door_id, requestData) => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     try {
       const topic = `doors/${door_id}/access/request`;
       const payload = JSON.stringify(requestData);
       
-      console.log(`[MQTT] Publishing to topic: ${topic}`);
-      console.log(`[MQTT] Payload:`, payload);
+      console.log(`\n[📡 MQTT Publish] Starting...`);
+      console.log(`   Topic: ${topic}`);
+      console.log(`   Payload: ${payload}`);
       
+      // Ensure MQTT client is created
       const mqttClient = getMQTTClient();
       
-      // If not connected, try to publish anyway (mqtt library buffers it)
+      // Wait for connection (max 5 seconds)
+      console.log(`[📡 MQTT] Waiting for broker connection...`);
+      const isReady = await waitForMQTTReady(5000);
+      
+      if (!isReady) {
+        console.warn(`[⚠️  MQTT] Client not connected but attempting publish anyway...`);
+      }
+      
+      // Publish with callback
       mqttClient.publish(topic, payload, { qos: 1 }, (err) => {
         if (err) {
-          console.error(`❌ [MQTT] Failed to publish to ${topic}:`, err.message);
+          console.error(`❌ [MQTT] Publish failed: ${err.message}`);
           resolve(false);
         } else {
-          console.log(`✅ [MQTT] Successfully published access request to ${topic}`);
+          console.log(`✅ [MQTT] Message published successfully to ${topic}`);
+          console.log(`   Client connected: ${mqttClient.connected}`);
           resolve(true);
         }
       });
       
     } catch (err) {
-      console.error('[MQTT] Publish error:', err.message);
+      console.error(`❌ [MQTT] Publish exception: ${err.message}`);
       resolve(false);
     }
   });
