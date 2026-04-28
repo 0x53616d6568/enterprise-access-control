@@ -9,6 +9,7 @@ import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
 import { mqttAccessService } from '../../services/mqttService';
 import { CustomAlert } from '../../components/CustomAlert';
+import { DoorControlPanel } from '../../components/DoorControlPanel';
 
 export default function MyDoorsScreen({ navigation }) {
   const { user } = useAuth();
@@ -154,6 +155,9 @@ export default function MyDoorsScreen({ navigation }) {
                   )}
                 </TouchableOpacity>
               </View>
+              
+              {/* Direct MQTT Control Panel */}
+              <DoorControlPanel doorId={door.door_id || door.id} doorName={door.door_name || door.name} />
             </View>
           ))
         ) : (

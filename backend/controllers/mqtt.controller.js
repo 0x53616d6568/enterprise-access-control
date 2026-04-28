@@ -243,9 +243,17 @@ const requestDoorAccess = async (req, res, next) => {
     // Check day of week restrictions
     // If days_of_week is set, validate the current day
     if (doorAccess.days_of_week && doorAccess.days_of_week.trim()) {
-      const allowedDays = doorAccess.days_of_week.split(',').map(d => parseInt(d.trim()));
+      // Map day names to JavaScript getDay() values
+      const dayNameMap = {
+        'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6
+      };
+      const allowedDays = doorAccess.days_of_week.split(',').map(d => {
+        const dayName = d.trim().toUpperCase();
+        return dayNameMap[dayName] !== undefined ? dayNameMap[dayName] : -1;
+      }).filter(d => d !== -1);
+      
       console.log(`[MQTT Access] Day check: current day=${dayOfWeek}, allowed days=${allowedDays}`);
-      if (!allowedDays.includes(dayOfWeek)) {
+      if (allowedDays.length > 0 && !allowedDays.includes(dayOfWeek)) {
         return error(res, 'No access on this day', 403);
       }
     }
