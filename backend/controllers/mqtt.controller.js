@@ -32,7 +32,7 @@ const getMqttClient = () => {
   }
 
   const brokerUrl = process.env.MQTT_BROKER || 'mqtts://bb9f7b883ac247ceb390c4c532330999.s1.eu.hivemq.cloud:8883';
-  const username = process.env.MQTT_USER || 'sameh';
+  const username = process.env.MQTT_USER || 'Sameh';
   const password = process.env.MQTT_PASSWORD || 'Samehsameh1020';
 
   mqttClient = mqtt.connect(brokerUrl, {
