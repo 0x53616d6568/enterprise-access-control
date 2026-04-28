@@ -60,25 +60,33 @@ export const mqttTokenService = {
 // Door access request management (Prompted behavior)
 export const mqttAccessService = {
   /**
-   * Request access to a door - Simple endpoint for quick access requests
-   * Creates an access request that managers can approve/deny
-   * Skips time/day validation - manager reviews the request
+   * Request access to a door - Get/create token and send to MQTT endpoint
    * 
    * @param {object} accessData - { door_id, door_name, user_id, user_name }
-   * @returns {Promise<object>} { request_id, status }
+   * @returns {Promise<object>} { requestId, status, requiresFaceAuth }
    */
   async requestAccess(accessData) {
     try {
-      const { door_id, door_name } = accessData;
+      const { door_id } = accessData;
       
       if (!door_id) {
         throw new Error('door_id is required');
       }
 
-      // Use dedicated door-access endpoint (no time/day validation, manager reviews)
+      // Get available tokens for user
+      const tokens = await mqttTokenService.getTokens();
+      
+      if (!tokens || tokens.length === 0) {
+        throw new Error('No MQTT tokens available. Please generate a token first.');
+      }
+
+      // Use first available token
+      const tokenId = tokens[0].id;
+
+      // Call the proper MQTT endpoint with token
       const response = await api.post(API.DOOR_ACCESS_REQUEST, {
-        door_id: door_id,
-        door_name: door_name || 'Unknown Door'
+        doorId: door_id,
+        tokenId: tokenId
       });
 
       console.log('[Access] Request sent:', response.data);

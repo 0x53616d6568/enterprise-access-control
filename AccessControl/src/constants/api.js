@@ -36,7 +36,7 @@ export const API = {
   // Requests
   MY_REQUESTS:           `${BASE_URL}/requests/me`,
   ALL_REQUESTS:          `${BASE_URL}/requests`,
-  DOOR_ACCESS_REQUEST:   `${BASE_URL}/requests/door-access`,
+  DOOR_ACCESS_REQUEST:   `${BASE_URL}/mqtt/request-access`,
   REVIEW_REQUEST:        (id) => `${BASE_URL}/requests/${id}/review`,
 
   // Visitors

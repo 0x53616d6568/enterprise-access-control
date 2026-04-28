@@ -16,6 +16,8 @@ from functools import wraps
 from config import Config
 from models import get_model
 import traceback
+import os
+import numpy as np
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -337,7 +339,70 @@ def db_stats():
             'success': False,
             'error': str(e)
         }), 500
+# =
+# Recognize by Embedding Endpoint
+# =
 
+@app.route('/recognize_embedding', methods=['POST'])
+@require_api_key
+def recognize_embedding():
+    """Accept a raw 512-dim ArcFace embedding and compare against database."""
+    try:
+        data = request.get_json()
+        
+        if not data or 'embedding' not in data:
+            return jsonify({'success': False, 'error': 'Missing embedding field'}), 400
+        
+        emb_list = data['embedding']
+        if len(emb_list) != 512:
+            return jsonify({
+                'success': False,
+                'error': f'Expected 512 dims, got {len(emb_list)}'
+            }), 400
+        
+        # Get model instance
+        model = get_model()
+        
+        # Convert to numpy and normalize
+        query_emb = np.array(emb_list, dtype=np.float32)
+        norm = np.linalg.norm(query_emb)
+        if norm > 0:
+            query_emb = query_emb / norm
+        
+        # Compare against database
+        best_match = None
+        best_sim = -1.0
+        
+        for user_id, db_emb in model.face_database.items():
+            db_emb = np.array(db_emb, dtype=np.float32)
+            db_norm = np.linalg.norm(db_emb)
+            if db_norm > 0:
+                db_emb = db_emb / db_norm
+            
+            sim = float(np.dot(query_emb, db_emb))
+            
+            if sim > best_sim:
+                best_sim = sim
+                best_match = user_id
+        
+        is_authorized = best_sim >= Config.SIMILARITY_THRESHOLD and best_match is not None
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'user_id': best_match,
+                'similarity': round(best_sim, 4),
+                'is_authorized': is_authorized,
+                'threshold': Config.SIMILARITY_THRESHOLD
+            }
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Recognize embedding error: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 # =
 # Error Handlers
 # =
@@ -362,6 +427,6 @@ if __name__ == '__main__':
     logger.info("API Key required: Yes")
     logger.info("Microservice ready - listening on 0.0.0.0:5000")
     logger.info("Model will load on first API request (lazy initialization)")
-    
+
     # Start server - model loads on first request
     app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)

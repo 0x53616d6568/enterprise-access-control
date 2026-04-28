@@ -4,8 +4,8 @@
 // ============================================
 // WiFi Configuration
 // ============================================
-#define WIFI_SSID "Your_WiFi_SSID"
-#define WIFI_PASSWORD "Your_WiFi_Password"
+#define WIFI_SSID "MAXBOX5G_AFE0"  // Replace with your WiFi SSID
+#define WIFI_PASSWORD "t3wkuygg7xxh"
 
 // ============================================
 // Face Recognition API Configuration
