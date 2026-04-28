@@ -187,27 +187,26 @@ const revokeAllTokens = async (req, res, next) => {
 const requestDoorAccess = async (req, res, next) => {
   try {
     const userId = req.user.user_id;
-    const { doorId, tokenId } = req.body;
+    const { doorId } = req.body;
 
-    if (!doorId || !tokenId) {
-      return error(res, 'doorId and tokenId are required', 400);
+    if (!doorId) {
+      return error(res, 'doorId is required', 400);
     }
 
-    // 1. Verify token belongs to user
-    const [tokens] = await db.query(
-      `SELECT id, expires_at, is_revoked FROM mqtt_tokens WHERE id = ? AND user_id = ?`,
-      [tokenId, userId]
+    // 1. Auto-generate or get existing MQTT token for user
+    let tokenId;
+    const [existingTokens] = await db.query(
+      `SELECT id, expires_at, is_revoked FROM mqtt_tokens WHERE user_id = ? AND is_revoked = 0 AND expires_at > NOW() LIMIT 1`,
+      [userId]
     );
 
-    if (!tokens.length) {
-      return error(res, 'Token not found', 404);
-    }
-
-    const token = tokens[0];
-
-    // Check if token is valid
-    if (token.is_revoked || new Date(token.expires_at) < Date.now()) {
-      return error(res, 'Token is not valid', 401);
+    if (existingTokens.length) {
+      // Use existing valid token
+      tokenId = existingTokens[0].id;
+    } else {
+      // Create new token
+      const tokenData = await createMqttToken(userId, 'auto-generated');
+      tokenId = tokenData.id;
     }
 
     // 2. Verify user has access to door
