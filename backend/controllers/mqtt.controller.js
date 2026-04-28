@@ -4,6 +4,7 @@
  */
 
 const db = require('../config/db');
+const mqtt = require('mqtt');
 const { success, error } = require('../utils/response');
 const {
   createMqttToken,
@@ -17,6 +18,90 @@ const {
   getUserAccessRequestHistory,
   cleanupExpiredRequests
 } = require('../utils/mqttTokenService');
+
+// MQTT Client for publishing unlock commands
+let mqttClient = null;
+let mqttConnected = false;
+
+/**
+ * Initialize or get MQTT client for publishing to HiveMQ
+ */
+const getMqttClient = () => {
+  if (mqttClient && mqttConnected) {
+    return mqttClient;
+  }
+
+  const brokerUrl = process.env.MQTT_BROKER || 'mqtts://bb9f7b883ac247ceb390c4c532330999.s1.eu.hivemq.cloud:8883';
+  const username = process.env.MQTT_USER || 'sameh';
+  const password = process.env.MQTT_PASSWORD || 'Samehsameh1020';
+
+  mqttClient = mqtt.connect(brokerUrl, {
+    username,
+    password,
+    clientId: `backend-mqtt-${Date.now()}`,
+    clean: true,
+    reconnectPeriod: 5000,
+    rejectUnauthorized: false,
+    connectTimeout: 10000,
+    keepalive: 30
+  });
+
+  mqttClient.on('connect', () => {
+    console.log('✅ [MQTT] Backend connected to HiveMQ broker');
+    mqttConnected = true;
+  });
+
+  mqttClient.on('error', (err) => {
+    console.error('❌ [MQTT] Connection error:', err.message);
+    mqttConnected = false;
+  });
+
+  mqttClient.on('disconnect', () => {
+    console.log('⚠️  [MQTT] Disconnected from broker');
+    mqttConnected = false;
+  });
+
+  return mqttClient;
+};
+
+/**
+ * Publish unlock command to MQTT
+ * @param {number} doorId - Door ID
+ * @param {number} userId - User ID
+ * @param {number} requestId - Access request ID
+ */
+const publishUnlockCommand = (doorId, userId, requestId) => {
+  return new Promise((resolve) => {
+    try {
+      const client = getMqttClient();
+      const topic = `doors/${doorId}/unlock`;
+      const payload = JSON.stringify({
+        action: 'UNLOCK',
+        doorId,
+        userId,
+        requestId,
+        timestamp: new Date().toISOString(),
+        duration: 5000  // Unlock for 5 seconds (LED blinking)
+      });
+
+      console.log(`\n[🔓 MQTT Unlock] Publishing to ${topic}`);
+      console.log(`   Payload: ${payload}`);
+
+      client.publish(topic, payload, { qos: 1 }, (err) => {
+        if (err) {
+          console.error(`❌ [MQTT] Publish failed: ${err.message}`);
+          resolve(false);
+        } else {
+          console.log(`✅ [MQTT] Unlock command sent successfully`);
+          resolve(true);
+        }
+      });
+    } catch (err) {
+      console.error(`❌ [MQTT] Publish error: ${err.message}`);
+      resolve(false);
+    }
+  });
+};
 
 /**
  * POST /api/mqtt/token/generate
@@ -181,6 +266,11 @@ const requestDoorAccess = async (req, res, next) => {
       await updateAccessRequest(requestData.requestId, 'ACCESS_GRANTED', {
         access_result: 'GRANTED'
       });
+
+      // 5. Publish unlock command to MQTT (async, non-blocking)
+      publishUnlockCommand(doorId, userId, requestData.requestId).catch(err => {
+        console.error('[MQTT] Failed to publish unlock command:', err.message);
+      });
     }
 
     return success(res, {
@@ -239,6 +329,11 @@ const submitFaceAuth = async (req, res, next) => {
       });
 
       await logMqttActivity(userId, null, 'FACE_AUTH_PASSED', `Request ID: ${requestId}`);
+
+      // Publish unlock command to MQTT after face auth passes (async, non-blocking)
+      publishUnlockCommand(request.door_id, userId, requestId).catch(err => {
+        console.error('[MQTT] Failed to publish unlock command after face auth:', err.message);
+      });
 
       return success(res, {
         requestId,
