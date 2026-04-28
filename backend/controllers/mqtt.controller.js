@@ -77,15 +77,17 @@ const publishUnlockCommand = (doorId, userId, requestId) => {
       const topic = `doors/${doorId}/unlock`;
       const payload = JSON.stringify({
         action: 'UNLOCK',
-        doorId,
-        userId,
-        requestId,
+        doorId: parseInt(doorId),
+        userId: parseInt(userId),
+        requestId: parseInt(requestId),
         timestamp: new Date().toISOString(),
-        duration: 5000  // Unlock for 5 seconds (LED blinking)
+        duration: 5000
       });
 
-      console.log(`\n[🔓 MQTT Unlock] Publishing to ${topic}`);
+      console.log(`\n[🔓 MQTT Unlock] Publishing to topic: ${topic}`);
       console.log(`   Payload: ${payload}`);
+      console.log(`   Client connected: ${client.connected}`);
+      console.log(`   MQTT connection status: ${mqttConnected}`);
 
       client.publish(topic, payload, { qos: 1 }, (err) => {
         if (err) {
@@ -189,7 +191,10 @@ const requestDoorAccess = async (req, res, next) => {
     const userId = req.user.user_id;
     const { doorId } = req.body;
 
+    console.log(`\n[MQTT Request] User ${userId} requesting access to door ${doorId}`);
+
     if (!doorId) {
+      console.error('[MQTT] ❌ doorId is missing from request body');
       return error(res, 'doorId is required', 400);
     }
 
@@ -275,6 +280,7 @@ const requestDoorAccess = async (req, res, next) => {
       });
 
       // 5. Publish unlock command to MQTT (async, non-blocking)
+      console.log(`[MQTT Publish] About to publish unlock for doorId=${doorId}, userId=${userId}, requestId=${requestData.requestId}`);
       publishUnlockCommand(doorId, userId, requestData.requestId).catch(err => {
         console.error('[MQTT] Failed to publish unlock command:', err.message);
       });
