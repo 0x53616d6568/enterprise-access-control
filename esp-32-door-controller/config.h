@@ -16,6 +16,7 @@
 // ============================================
 // Door Control Configuration
 // ============================================
+#define DOOR_ID 1                // Door identifier (matches database door_id)
 #define UNLOCK_DURATION 3000     // Milliseconds (3 seconds)
 #define CONFIDENCE_THRESHOLD 0.6 // Minimum face match confidence (0.0 - 1.0)
 

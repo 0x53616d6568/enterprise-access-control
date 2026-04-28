@@ -17,16 +17,14 @@
 // #include <WiFiClient.h>
 
 // Configuration
-#define MQTT_BROKER "mqtt-broker-aiven.aivencloud.com"
-#define MQTT_PORT 1883
-#define MQTT_USER "avnadmin"
-#define MQTT_PASSWORD "your_mqtt_password"
+#define MQTT_BROKER "bb9f7b883ac247ceb390c4c532330999.s1.eu.hivemq.cloud"
+#define MQTT_PORT 8883
+#define MQTT_USER "sameh"
+#define MQTT_PASSWORD "Samehsameh1020"
 
-// Topics
-#define MQTT_TOPIC_UNLOCK_CMD "door/unlock"
-#define MQTT_TOPIC_DOOR_STATE "door/state"
-#define MQTT_TOPIC_FACE_RESULT "door/face_result"
-#define MQTT_TOPIC_STATUS "door/status"
+// Topics - dynamically constructed with DOOR_ID from config.h
+// Subscribe to: doors/{DOOR_ID}/unlock
+// We'll define the topic string at runtime
 
 // MQTT client (uncomment if using MQTT)
 // WiFiClient espClient;
@@ -44,15 +42,18 @@ void initializeMQTT() {
   Serial.println("Attempting MQTT connection...");
   
   if (mqttClient.connect("ESP32_Door_Controller", MQTT_USER, MQTT_PASSWORD)) {
-    Serial.println("MQTT connected!");
+    Serial.println("✅ MQTT connected!");
     
-    // Subscribe to unlock commands
-    mqttClient.subscribe(MQTT_TOPIC_UNLOCK_CMD);
+    // Subscribe to door-specific unlock commands
+    char topic[64];
+    snprintf(topic, sizeof(topic), "doors/%d/unlock", DOOR_ID);
+    mqttClient.subscribe(topic);
+    Serial.printf("📡 Subscribed to: %s\n", topic);
     
     // Publish initial status
-    publishDoorState("LOCKED");
+    Serial.println("🚪 Door initialized - locked state");
   } else {
-    Serial.printf("MQTT connection failed, rc=%d\n", mqttClient.state());
+    Serial.printf("❌ MQTT connection failed, rc=%d\n", mqttClient.state());
   }
 }
 
@@ -66,18 +67,50 @@ void onMQTTMessage(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
   
-  // Parse unlock command
-  if (strcmp(topic, MQTT_TOPIC_UNLOCK_CMD) == 0) {
-    String message = String((char*)payload).substring(0, length);
+  // Create topic string for comparison
+  char expectedTopic[64];
+  snprintf(expectedTopic, sizeof(expectedTopic), "doors/%d/unlock", DOOR_ID);
+  
+  // Check if this is an unlock command for our door
+  if (strcmp(topic, expectedTopic) == 0) {
+    // Parse JSON payload
+    // Expected: { "action": "UNLOCK", "doorId": 1, "userId": 123, "duration": 5000 }
+    String jsonStr = String((char*)payload).substring(0, length);
     
-    if (message == "unlock") {
-      Serial.println("Unlock command received via MQTT");
-      unlockDoor();
-      publishDoorState("UNLOCKED");
-    } else if (message == "lock") {
-      Serial.println("Lock command received via MQTT");
+    Serial.println("🔓 Parsing unlock command JSON...");
+    Serial.print("   Payload: ");
+    Serial.println(jsonStr);
+    
+    // Simple JSON parsing (looking for "action": "UNLOCK")
+    if (jsonStr.indexOf("\"action\":\"UNLOCK\"") >= 0 || jsonStr.indexOf("\"action\": \"UNLOCK\"") >= 0) {
+      Serial.println("✅ Unlock command recognized!");
+      Serial.println("🔓 UNLOCKING DOOR...");
+      
+      // Get duration if specified (default 5000ms for LED blinking)
+      int durationIdx = jsonStr.indexOf("\"duration\"");
+      int duration = 5000;  // Default 5 seconds
+      if (durationIdx >= 0) {
+        int colonIdx = jsonStr.indexOf(":", durationIdx);
+        int commaIdx = jsonStr.indexOf(",", colonIdx);
+        if (commaIdx < 0) commaIdx = jsonStr.indexOf("}", colonIdx);
+        
+        String durationStr = jsonStr.substring(colonIdx + 1, commaIdx);
+        durationStr.trim();
+        duration = durationStr.toInt();
+        Serial.printf("   Duration: %d ms\n", duration);
+      }
+      
+      unlockDoor(duration);  // Unlock for specified duration
+      
+      // Blink LED to indicate unlocked state
+      digitalWrite(LED_PIN, HIGH);   // LED ON (door open/unlocked state)
+      
+      // Re-lock after duration
+      delay(duration);
+      digitalWrite(LED_PIN, LOW);    // LED OFF (door locked state)
       lockDoor();
-      publishDoorState("LOCKED");
+      
+      Serial.println("✅ Door re-locked");
     }
   }
 }
