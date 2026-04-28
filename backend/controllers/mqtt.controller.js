@@ -74,7 +74,7 @@ const publishUnlockCommand = (doorId, userId, requestId) => {
   return new Promise((resolve) => {
     try {
       const client = getMqttClient();
-      const topic = `doors/${doorId}/unlock`;
+      const topic = `doors/${doorId}/control`;
       const payload = JSON.stringify({
         action: 'UNLOCK',
         doorId: parseInt(doorId),
