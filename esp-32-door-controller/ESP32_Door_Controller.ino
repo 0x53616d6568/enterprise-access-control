@@ -52,6 +52,7 @@
 
 // Backend API
 #define BACKEND_API "https://enterprise-access-control.onrender.com/api"
+#define BACKEND_API_KEY "your-esp-api-key-here"  // Set this to your Pi API key
 
 // Pin Definitions
 #define RELAY_PIN 12                 // Door lock relay
@@ -94,6 +95,9 @@ unsigned long lastButtonPress = 0;
 const unsigned long DEBOUNCE_TIME = 500;
 
 DoorState currentDoorState = LOCKED;
+
+// Camera status flag
+bool cameraInitialized = false;  // Set to true if camera module is initialized
 
 #define MAX_IMAGE_SIZE 100000
 uint8_t imageBuffer[MAX_IMAGE_SIZE];
@@ -152,6 +156,7 @@ void setup() {
   Serial.println("\n✅ Setup complete!\n");
   Serial.println("Available commands:");
   Serial.println("  TRIGGER       - Request door access");
+  Serial.println("  DOOR_ACCESS   - Test door access flows (NEW)");
   Serial.println("  UNLOCK        - Unlock door");
   Serial.println("  LOCK          - Lock door");
   Serial.println("  STATUS        - Show system status");
@@ -206,6 +211,10 @@ void handleSerialCommand() {
     Serial.println("  → Starting access request...");
     triggerAccess = true;
   }
+  else if (command == "DOOR_ACCESS") {
+    // New: Interactive door access test menu
+    handleDoorAccessTestMenu();
+  }
   else if (command == "UNLOCK") {
     Serial.println("  → Unlocking door");
     unlockDoor(UNLOCK_DURATION);
@@ -229,12 +238,45 @@ void printHelp() {
   Serial.println("\n╔════════════════════════════════════════╗");
   Serial.println("║       Serial Command Help              ║");
   Serial.println("╠════════════════════════════════════════╣");
-  Serial.println("║ TRIGGER     - Request door access     ║");
-  Serial.println("║ UNLOCK      - Unlock door now         ║");
-  Serial.println("║ LOCK        - Lock door now           ║");
-  Serial.println("║ STATUS      - Show system status      ║");
-  Serial.println("║ HELP        - Show this menu          ║");
+  Serial.println("║ TRIGGER      - Request door access    ║");
+  Serial.println("║ DOOR_ACCESS  - Test door flows (NEW)  ║");
+  Serial.println("║ UNLOCK       - Unlock door now        ║");
+  Serial.println("║ LOCK         - Lock door now          ║");
+  Serial.println("║ STATUS       - Show system status     ║");
+  Serial.println("║ HELP         - Show this menu         ║");
   Serial.println("╚════════════════════════════════════════╝\n");
+}
+
+/**
+ * Interactive menu for testing door access flows
+ * Guides user through Scenario 1 and Scenario 2
+ */
+void handleDoorAccessTestMenu() {
+  bool inMenu = true;
+  
+  while (inMenu) {
+    showDoorAccessMenu();
+    
+    // Wait for user input
+    while (!Serial.available()) {
+      delay(100);
+    }
+    
+    char choice = Serial.read();
+    Serial.println(choice);  // Echo input
+    
+    // Consume newline if present
+    if (Serial.available() && Serial.peek() == '\n') {
+      Serial.read();
+    }
+    delay(100);
+    
+    if (choice == '3' || choice == 'q' || choice == 'Q') {
+      inMenu = false;
+    } else {
+      handleDoorAccessMenu(choice);
+    }
+  }
 }
 
 void printStatus() {
@@ -425,9 +467,9 @@ void initializeMQTT() {
   if (mqttClient.connect("ESP32_Door_1", MQTT_USER, MQTT_PASSWORD)) {
     Serial.println("[MQTT] ✅ Connected!");
     
-    // Subscribe to door-specific unlock commands
+    // Subscribe to door-specific control commands
     char topic[64];
-    snprintf(topic, sizeof(topic), "doors/%d/unlock", DOOR_ID);
+    snprintf(topic, sizeof(topic), "doors/%d/control", DOOR_ID);
     mqttClient.subscribe(topic);
     Serial.printf("[MQTT] 📡 Subscribed to: %s\n", topic);
   } else {
@@ -444,15 +486,15 @@ void onMQTTMessage(char* topic, byte* payload, unsigned int length) {
   
   // Create topic string for comparison
   char expectedTopic[64];
-  snprintf(expectedTopic, sizeof(expectedTopic), "doors/%d/unlock", DOOR_ID);
+  snprintf(expectedTopic, sizeof(expectedTopic), "doors/%d/control", DOOR_ID);
   
-  // Check if this is an unlock command for our door
+  // Check if this is a control command for our door
   if (strcmp(topic, expectedTopic) == 0) {
     // Parse JSON payload
     // Expected: { "action": "UNLOCK", "doorId": 1, "userId": 123, "duration": 3000 }
     String jsonStr = String((char*)payload).substring(0, length);
     
-    Serial.println("[MQTT] 🔓 Parsing unlock command...");
+    Serial.println("[MQTT] 🔓 Parsing control command...");
     
     // Simple JSON parsing (looking for "action": "UNLOCK")
     if (jsonStr.indexOf("\"action\":\"UNLOCK\"") >= 0 || jsonStr.indexOf("\"action\": \"UNLOCK\"") >= 0) {
@@ -484,16 +526,16 @@ void onMQTTMessage(char* topic, byte* payload, unsigned int length) {
 void publishDoorState(const char* state) {
   if (mqttClient.connected()) {
     char topic[64];
-    snprintf(topic, sizeof(topic), "doors/%d/state", DOOR_ID);
+    snprintf(topic, sizeof(topic), "doors/%d/status", DOOR_ID);
     mqttClient.publish(topic, state);
-    Serial.printf("[MQTT] Published door state: %s\n", state);
+    Serial.printf("[MQTT] Published door status: %s\n", state);
   }
 }
 
 void publishFaceResult(bool success, const char* userId, float confidence) {
   if (mqttClient.connected()) {
     char topic[64];
-    snprintf(topic, sizeof(topic), "doors/%d/face_result", DOOR_ID);
+    snprintf(topic, sizeof(topic), "doors/%d/events", DOOR_ID);
     
     // Create JSON payload
     char payload[256];
@@ -518,7 +560,7 @@ void maintainMQTT() {
         
         // Resubscribe to topic
         char topic[64];
-        snprintf(topic, sizeof(topic), "doors/%d/unlock", DOOR_ID);
+        snprintf(topic, sizeof(topic), "doors/%d/control", DOOR_ID);
         mqttClient.subscribe(topic);
       } else {
         Serial.printf("[MQTT] ❌ Reconnect failed, rc=%d\n", mqttClient.state());
@@ -537,9 +579,9 @@ void maintainMQTT() {
  * ✅ MQTT Integration ENABLED
  * 
  * Features:
- *  • Subscribes to: doors/{DOOR_ID}/unlock
- *  • Publishes door state to: doors/{DOOR_ID}/state
- *  • Publishes face results to: doors/{DOOR_ID}/face_result
+ *  • Subscribes to: doors/{DOOR_ID}/control
+ *  • Publishes door status to: doors/{DOOR_ID}/status
+ *  • Publishes events to: doors/{DOOR_ID}/events
  *  • Automatically reconnects if connection drops
  *  • Receives JSON unlock commands: {"action":"UNLOCK","duration":3000}
  * 

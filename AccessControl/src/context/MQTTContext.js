@@ -32,12 +32,12 @@ export const MQTTProvider = ({ children }) => {
           setConnected(true);
           
           // Subscribe to all door topics
-          mqttClient.subscribe('doors/+/state', (err) => {
-            if (!err) console.log('📡 [MQTT] Subscribed to doors/+/state');
+          mqttClient.subscribe('doors/+/status', (err) => {
+            if (!err) console.log('📡 [MQTT] Subscribed to doors/+/status');
           });
           
-          mqttClient.subscribe('doors/+/face_result', (err) => {
-            if (!err) console.log('📡 [MQTT] Subscribed to doors/+/face_result');
+          mqttClient.subscribe('doors/+/events', (err) => {
+            if (!err) console.log('📡 [MQTT] Subscribed to doors/+/events');
           });
         });
 
@@ -46,25 +46,25 @@ export const MQTTProvider = ({ children }) => {
           console.log(`[MQTT] Message [${topic}]: ${payload}`);
           setLastMessage({ topic, payload, timestamp: new Date() });
 
-          // Parse door state messages
-          if (topic.includes('/state')) {
-            const doorIdMatch = topic.match(/doors\/(\d+)\/state/);
+          // Parse door status messages
+          if (topic.includes('/status')) {
+            const doorIdMatch = topic.match(/doors\/(\d+)\/status/);
             if (doorIdMatch) {
               const doorId = doorIdMatch[1];
               setDoorStatus(prev => ({ ...prev, [doorId]: payload }));
             }
           }
 
-          // Parse face result messages
-          if (topic.includes('/face_result')) {
-            const doorIdMatch = topic.match(/doors\/(\d+)\/face_result/);
+          // Parse event messages (face results, etc)
+          if (topic.includes('/events')) {
+            const doorIdMatch = topic.match(/doors\/(\d+)\/events/);
             if (doorIdMatch) {
               const doorId = doorIdMatch[1];
               try {
                 const result = JSON.parse(payload);
                 setFaceResults(prev => ({ ...prev, [doorId]: result }));
               } catch (e) {
-                console.error('Failed to parse face result:', e);
+                console.error('Failed to parse event:', e);
               }
             }
           }
@@ -102,7 +102,7 @@ export const MQTTProvider = ({ children }) => {
       return false;
     }
 
-    const topic = `doors/${doorId}/unlock`;
+    const topic = `doors/${doorId}/control`;
     const payload = JSON.stringify({
       action: 'UNLOCK',
       doorId,
@@ -128,7 +128,7 @@ export const MQTTProvider = ({ children }) => {
       return false;
     }
 
-    const topic = `doors/${doorId}/lock`;
+    const topic = `doors/${doorId}/control`;
     const payload = JSON.stringify({
       action: 'LOCK',
       doorId,
