@@ -16,9 +16,9 @@ const initializeEmailTransporter = async () => {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,  // true for SSL on port 465
-      connectionTimeout: 10000,  // 10 seconds
-      greetingTimeout: 10000,    // 10 seconds
-      socketTimeout: 10000,      // 10 seconds
+      connectionTimeout: 20000,  // 20 seconds
+      greetingTimeout: 20000,    // 20 seconds
+      socketTimeout: 20000,      // 20 seconds
       auth: {
         type: 'OAuth2',
         user: process.env.GMAIL_USER,
