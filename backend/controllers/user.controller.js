@@ -138,84 +138,104 @@ const createUser = async (req, res, next) => {
       [full_name, email, phone, department, role_id, passwordHash]
     );
 
+    console.log(`✅ [CREATE_USER] User inserted with ID: ${result.insertId}`);
+
     // Send welcome email
-    try {
-      await transporter.sendMail({
-        from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
-        to:      email,
-        subject: '🔐 Welcome to SecureApp — Your Account is Ready',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background-color: #0D1117; padding: 32px 20px; border-radius: 12px; color: #F0F6FC;">
-              <!-- Header -->
-              <div style="text-align: center; margin-bottom: 32px;">
-                <div style="font-size: 32px; margin-bottom: 12px;">🔐</div>
-                <h2 style="margin: 0; color: #2D7DD2; font-size: 24px;">Welcome to SecureApp!</h2>
-              </div>
+    let emailSent = false;
+    if (!transporter) {
+      console.warn(`⚠️ [CREATE_USER] Email transporter not initialized for user ${email}`);
+    } else {
+      try {
+        console.log(`📧 [CREATE_USER] Attempting to send welcome email to ${email}...`);
+        await transporter.sendMail({
+          from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
+          to:      email,
+          subject: '🔐 Welcome to SecureApp — Your Account is Ready',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #0D1117; padding: 32px 20px; border-radius: 12px; color: #F0F6FC;">
+                <!-- Header -->
+                <div style="text-align: center; margin-bottom: 32px;">
+                  <div style="font-size: 32px; margin-bottom: 12px;">🔐</div>
+                  <h2 style="margin: 0; color: #2D7DD2; font-size: 24px;">Welcome to SecureApp!</h2>
+                </div>
 
-              <!-- Welcome Message -->
-              <p style="margin: 0 0 16px 0; font-size: 16px;">Hello <strong>${full_name}</strong>,</p>
-              <p style="margin: 0 0 24px 0; color: #8B949E;">
-                Your enterprise access control account has been successfully created. You can now log in to access the system.
-              </p>
+                <!-- Welcome Message -->
+                <p style="margin: 0 0 16px 0; font-size: 16px;">Hello <strong>${full_name}</strong>,</p>
+                <p style="margin: 0 0 24px 0; color: #8B949E;">
+                  Your enterprise access control account has been successfully created. You can now log in to access the system.
+                </p>
 
-              <!-- Credentials Box -->
-              <div style="background-color: #161B22; padding: 24px; border-radius: 8px; border: 2px solid #2D7DD2; margin: 32px 0;">
-                <p style="margin: 0 0 12px 0; color: #8B949E; font-size: 12px; text-transform: uppercase;">Login Credentials</p>
+                <!-- Credentials Box -->
+                <div style="background-color: #161B22; padding: 24px; border-radius: 8px; border: 2px solid #2D7DD2; margin: 32px 0;">
+                  <p style="margin: 0 0 12px 0; color: #8B949E; font-size: 12px; text-transform: uppercase;">Login Credentials</p>
+                  
+                  <div style="margin: 12px 0;">
+                    <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Email Address</p>
+                    <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all;">
+                      <strong>${email}</strong>
+                    </p>
+                  </div>
+
+                  <div style="margin: 16px 0;">
+                    <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Temporary Password</p>
+                    <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all; font-size: 14px; letter-spacing: 1px;">
+                      <strong>${tempPassword}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Important Notice -->
+                <div style="background-color: rgba(200, 48, 48, 0.1); padding: 16px; border-radius: 8px; border-left: 4px solid #C53030; margin: 24px 0;">
+                  <p style="margin: 0; color: #8B949E;">
+                    <strong style="color: #C53030;">⚠️ Important:</strong> You will be required to change your password on first login. Keep this temporary password safe and confidential.
+                  </p>
+                </div>
+
+                <!-- Login Instructions -->
+                <div style="background-color: #161B22; padding: 16px; border-radius: 8px; margin: 24px 0;">
+                  <p style="margin: 0 0 12px 0; color: #58A6FF; font-weight: bold;">3 Steps to Get Started:</p>
+                  <ol style="margin: 8px 0 0 20px; color: #8B949E; line-height: 1.8;">
+                    <li>Download or open the SecureApp mobile application</li>
+                    <li>Log in with the credentials above</li>
+                    <li>Change your password when prompted (minimum 8 characters)</li>
+                  </ol>
+                </div>
+
+                <!-- Support -->
+                <p style="margin: 32px 0 0 0; padding-top: 16px; border-top: 1px solid #21262D; color: #8B949E; font-size: 12px; line-height: 1.6;">
+                  If you encounter any issues logging in or have questions, please contact your system administrator.<br/>
+                  <strong style="color: #58A6FF;">Administrator Email:</strong> ${process.env.ADMIN_EMAIL || 'admin@secureapp.local'}
+                </p>
                 
-                <div style="margin: 12px 0;">
-                  <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Email Address</p>
-                  <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all;">
-                    <strong>${email}</strong>
-                  </p>
-                </div>
-
-                <div style="margin: 16px 0;">
-                  <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Temporary Password</p>
-                  <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all; font-size: 14px; letter-spacing: 1px;">
-                    <strong>${tempPassword}</strong>
-                  </p>
-                </div>
-              </div>
-
-              <!-- Important Notice -->
-              <div style="background-color: rgba(200, 48, 48, 0.1); padding: 16px; border-radius: 8px; border-left: 4px solid #C53030; margin: 24px 0;">
-                <p style="margin: 0; color: #8B949E;">
-                  <strong style="color: #C53030;">⚠️ Important:</strong> You will be required to change your password on first login. Keep this temporary password safe and confidential.
+                <p style="margin: 8px 0 0 0; color: #8B949E; font-size: 11px;">
+                  © 2024 SecureApp Enterprise Access Control
                 </p>
               </div>
-
-              <!-- Login Instructions -->
-              <div style="background-color: #161B22; padding: 16px; border-radius: 8px; margin: 24px 0;">
-                <p style="margin: 0 0 12px 0; color: #58A6FF; font-weight: bold;">3 Steps to Get Started:</p>
-                <ol style="margin: 8px 0 0 20px; color: #8B949E; line-height: 1.8;">
-                  <li>Download or open the SecureApp mobile application</li>
-                  <li>Log in with the credentials above</li>
-                  <li>Change your password when prompted (minimum 8 characters)</li>
-                </ol>
-              </div>
-
-              <!-- Support -->
-              <p style="margin: 32px 0 0 0; padding-top: 16px; border-top: 1px solid #21262D; color: #8B949E; font-size: 12px; line-height: 1.6;">
-                If you encounter any issues logging in or have questions, please contact your system administrator.<br/>
-                <strong style="color: #58A6FF;">Administrator Email:</strong> ${process.env.ADMIN_EMAIL || 'admin@secureapp.local'}
-              </p>
-              
-              <p style="margin: 8px 0 0 0; color: #8B949E; font-size: 11px;">
-                © 2024 SecureApp Enterprise Access Control
-              </p>
             </div>
-          </div>
-        `,
-      });
-      console.log(`✅ Welcome email sent to ${email}`);
-    } catch (emailErr) {
-      console.error(`⚠️ Email sending failed for ${email}:`, emailErr.message);
-      // Don't fail the entire user creation if email fails
+          `,
+        });
+        console.log(`✅ [CREATE_USER] Welcome email sent successfully to ${email}`);
+        emailSent = true;
+      } catch (emailErr) {
+        console.error(`❌ [CREATE_USER] Email sending failed for ${email}:`, {
+          message: emailErr.message,
+          code: emailErr.code,
+          response: emailErr.response
+        });
+        // Don't fail the entire user creation if email fails
+      }
     }
 
-    return success(res, { user_id: result.insertId }, 'User created and email sent', 201);
-  } catch (err) { next(err); }
+    const message = emailSent ? 'User created and email sent' : 'User created but email failed';
+    return success(res, { user_id: result.insertId, emailSent }, message, 201);
+  } catch (err) {
+    console.error(`❌ [CREATE_USER] Unexpected error:`, {
+      message: err.message,
+      stack: err.stack
+    });
+    next(err);
+  }
 };
 
 // PUT /api/users/:id
