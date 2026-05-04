@@ -14,10 +14,11 @@ const initializeEmailTransporter = async () => {
 
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      connectionTimeout: 30000,  // 30 second connection timeout
-      socketTimeout: 60000,      // 60 second socket timeout
+      port: 465,
+      secure: true,  // true for SSL on port 465
+      connectionTimeout: 10000,  // 10 seconds
+      greetingTimeout: 10000,    // 10 seconds
+      socketTimeout: 10000,      // 10 seconds
       auth: {
         type: 'OAuth2',
         user: process.env.GMAIL_USER,
