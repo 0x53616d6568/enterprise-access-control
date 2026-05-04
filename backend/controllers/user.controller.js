@@ -15,7 +15,9 @@ const initializeEmailTransporter = async () => {
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
-      secure: false,  // false for TLS on port 587
+      secure: false,
+      connectionTimeout: 30000,  // 30 second connection timeout
+      socketTimeout: 60000,      // 60 second socket timeout
       auth: {
         type: 'OAuth2',
         user: process.env.GMAIL_USER,
@@ -151,8 +153,8 @@ const createUser = async (req, res, next) => {
       try {
         console.log(`📧 [CREATE_USER] Sending welcome email to ${email} (async)...`);
         
-        // Set 10-second timeout for email sending
-        const sendEmailPromise = transporter.sendMail({
+        // Send email without timeout wrapper - let nodemailer handle connection
+        await transporter.sendMail({
           from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
           to:      email,
           subject: '🔐 Welcome to SecureApp — Your Account is Ready',
@@ -220,12 +222,7 @@ const createUser = async (req, res, next) => {
             </div>
           `,
         });
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Email sending timeout (30s)')), 30000)
-        );
-
-        await Promise.race([sendEmailPromise, timeoutPromise]);
+        
         console.log(`✅ [CREATE_USER] Welcome email sent successfully to ${email}`);
       } catch (emailErr) {
         console.error(`❌ [CREATE_USER] Background email failed for ${email}:`, {

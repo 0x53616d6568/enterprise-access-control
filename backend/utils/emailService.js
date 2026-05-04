@@ -14,7 +14,9 @@ const initializeEmailService = async () => {
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
-      secure: false,  // false for TLS on port 587
+      secure: false,
+      connectionTimeout: 30000,  // 30 second connection timeout
+      socketTimeout: 60000,      // 60 second socket timeout
       auth: {
         type: 'OAuth2',
         user: process.env.GMAIL_USER,
