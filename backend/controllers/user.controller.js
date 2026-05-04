@@ -147,7 +147,9 @@ const createUser = async (req, res, next) => {
     } else {
       try {
         console.log(`📧 [CREATE_USER] Attempting to send welcome email to ${email}...`);
-        await transporter.sendMail({
+        
+        // Wrap sendMail with a 10-second timeout to prevent hanging
+        const sendEmailPromise = transporter.sendMail({
           from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
           to:      email,
           subject: '🔐 Welcome to SecureApp — Your Account is Ready',
@@ -215,6 +217,13 @@ const createUser = async (req, res, next) => {
             </div>
           `,
         });
+
+        // Set 10-second timeout for email sending
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Email sending timeout (10s)')), 10000)
+        );
+
+        await Promise.race([sendEmailPromise, timeoutPromise]);
         console.log(`✅ [CREATE_USER] Welcome email sent successfully to ${email}`);
         emailSent = true;
       } catch (emailErr) {
