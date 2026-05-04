@@ -13,7 +13,9 @@ const initializeEmailTransporter = async () => {
     }
 
     transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,  // false for TLS on port 587
       auth: {
         type: 'OAuth2',
         user: process.env.GMAIL_USER,
@@ -140,15 +142,16 @@ const createUser = async (req, res, next) => {
 
     console.log(`✅ [CREATE_USER] User inserted with ID: ${result.insertId}`);
 
-    // Send welcome email
-    let emailSent = false;
-    if (!transporter) {
-      console.warn(`⚠️ [CREATE_USER] Email transporter not initialized for user ${email}`);
-    } else {
+    // Send welcome email asynchronously (don't block API response)
+    const sendWelcomeEmail = async () => {
+      if (!transporter) {
+        console.warn(`⚠️ [CREATE_USER] Email transporter not initialized for user ${email}`);
+        return;
+      }
       try {
-        console.log(`📧 [CREATE_USER] Attempting to send welcome email to ${email}...`);
+        console.log(`📧 [CREATE_USER] Sending welcome email to ${email} (async)...`);
         
-        // Wrap sendMail with a 10-second timeout to prevent hanging
+        // Set 10-second timeout for email sending
         const sendEmailPromise = transporter.sendMail({
           from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
           to:      email,
@@ -218,26 +221,28 @@ const createUser = async (req, res, next) => {
           `,
         });
 
-        // Set 10-second timeout for email sending
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Email sending timeout (10s)')), 10000)
         );
 
         await Promise.race([sendEmailPromise, timeoutPromise]);
         console.log(`✅ [CREATE_USER] Welcome email sent successfully to ${email}`);
-        emailSent = true;
       } catch (emailErr) {
-        console.error(`❌ [CREATE_USER] Email sending failed for ${email}:`, {
+        console.error(`❌ [CREATE_USER] Background email failed for ${email}:`, {
           message: emailErr.message,
           code: emailErr.code,
           response: emailErr.response
         });
-        // Don't fail the entire user creation if email fails
       }
-    }
+    };
 
-    const message = emailSent ? 'User created and email sent' : 'User created but email failed';
-    return success(res, { user_id: result.insertId, emailSent }, message, 201);
+    // Fire off email send in background (don't await)
+    sendWelcomeEmail().catch(err => 
+      console.error(`❌ [CREATE_USER] Uncaught error in background email:`, err.message)
+    );
+
+    // Return success immediately (user is created)
+    return success(res, { user_id: result.insertId }, 'User created successfully', 201);
   } catch (err) {
     console.error(`❌ [CREATE_USER] Unexpected error:`, {
       message: err.message,
