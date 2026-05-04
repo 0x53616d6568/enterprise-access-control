@@ -222,7 +222,7 @@ const createUser = async (req, res, next) => {
         });
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Email sending timeout (10s)')), 10000)
+          setTimeout(() => reject(new Error('Email sending timeout (30s)')), 30000)
         );
 
         await Promise.race([sendEmailPromise, timeoutPromise]);
