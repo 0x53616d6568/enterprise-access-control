@@ -2,36 +2,44 @@ const bcrypt    = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const db        = require('../config/db');
 const { success, error } = require('../utils/response');
+const { createLocalTransporter } = require('../utils/localEmailService');
 
 let transporter = null;
+let useLocalEmail = false;
 
-// Initialize Gmail OAuth2 transporter
+// Initialize Gmail OAuth2 transporter or fallback to local
 const initializeEmailTransporter = async () => {
   try {
-    if (!process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_REFRESH_TOKEN) {
-      throw new Error('Gmail OAuth2 not configured');
+    if (process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN) {
+      transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,  // true for SSL on port 465
+        family: 4,     // Force IPv4 to avoid IPv6 connectivity issues
+        connectionTimeout: 20000,  // 20 seconds
+        greetingTimeout: 20000,    // 20 seconds
+        socketTimeout: 20000,      // 20 seconds
+        auth: {
+          type: 'OAuth2',
+          user: process.env.GMAIL_USER,
+          clientId: process.env.GMAIL_CLIENT_ID,
+          clientSecret: process.env.GMAIL_CLIENT_SECRET,
+          refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+        },
+      });
+
+      console.log('✅ User controller email transporter ready');
+    } else {
+      // Fallback to local email service
+      useLocalEmail = true;
+      transporter = createLocalTransporter();
+      console.log('📧 User controller using local email service');
     }
-
-    transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,  // true for SSL on port 465
-      family: 4,     // Force IPv4 to avoid IPv6 connectivity issues
-      connectionTimeout: 20000,  // 20 seconds
-      greetingTimeout: 20000,    // 20 seconds
-      socketTimeout: 20000,      // 20 seconds
-      auth: {
-        type: 'OAuth2',
-        user: process.env.GMAIL_USER,
-        clientId: process.env.GMAIL_CLIENT_ID,
-        clientSecret: process.env.GMAIL_CLIENT_SECRET,
-        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-      },
-    });
-
-    console.log('✅ User controller email transporter ready');
   } catch (err) {
-    console.error('❌ Email transporter init failed:', err.message);
+    console.warn('⚠️ Email transporter setup failed:', err.message);
+    useLocalEmail = true;
+    transporter = createLocalTransporter();
+    console.log('📧 User controller falling back to local email service');
   }
 };
 

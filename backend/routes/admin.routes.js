@@ -11,6 +11,11 @@ const {
   assignTeamToManager,
   removeTeamMember,
   getManagerTeam,
+  getLocalEmailLog,
+  getEmailPreviewById,
+  getEmailsForRecipient,
+  clearLocalEmails,
+  exportEmailsAsHtml
 } = require('../controllers/admin.controller');
 const { authenticate } = require('../middleware/auth');
 
@@ -54,5 +59,25 @@ router.get('/manager-teams/:manager_id', authenticate, getManagerTeam);
 
 // Remove team member from manager
 router.delete('/manager-teams/:manager_id/:member_id', authenticate, removeTeamMember);
+
+/**
+ * Local Email Service Routes (Admin Only)
+ * View and manage locally stored emails
+ */
+
+// Get all local emails
+router.get('/emails', authenticate, getLocalEmailLog);
+
+// Get specific email by ID
+router.get('/emails/:emailId', authenticate, getEmailPreviewById);
+
+// Get all emails for a recipient
+router.get('/emails/recipient/:email', authenticate, getEmailsForRecipient);
+
+// Export emails as HTML report
+router.get('/emails-report/html', authenticate, exportEmailsAsHtml);
+
+// Clear all local emails
+router.delete('/emails', authenticate, clearLocalEmails);
 
 module.exports = router;

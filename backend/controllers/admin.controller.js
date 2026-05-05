@@ -498,6 +498,120 @@ const getManagerTeam = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/admin/emails
+ * View all locally stored emails (admin only)
+ * Only available when using local email service
+ */
+const getLocalEmailLog = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { getEmailLog } = require('../utils/localEmailService');
+    const emails = getEmailLog();
+
+    return success(res, {
+      total: emails.length,
+      emails: emails.reverse() // Most recent first
+    }, 'Email log retrieved');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/admin/emails/:emailId
+ * View full email content (admin only)
+ */
+const getEmailPreviewById = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { emailId } = req.params;
+    const { getEmailPreview } = require('../utils/localEmailService');
+    const emailContent = getEmailPreview(emailId);
+
+    if (!emailContent) {
+      return error(res, 'Email not found', 404);
+    }
+
+    return success(res, emailContent, 'Email retrieved');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/admin/emails/recipient/:email
+ * View all emails for a specific recipient
+ */
+const getEmailsForRecipient = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { email } = req.params;
+    const { getEmailsForRecipient: getEmails } = require('../utils/localEmailService');
+    const emails = getEmails(email);
+
+    return success(res, {
+      recipient: email,
+      total: emails.length,
+      emails: emails.reverse()
+    }, 'Recipient emails retrieved');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/admin/emails
+ * Clear all local emails (admin only - use with caution)
+ */
+const clearLocalEmails = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { clearAllEmails } = require('../utils/localEmailService');
+    const result = clearAllEmails();
+
+    if (result) {
+      return success(res, {}, 'All local emails cleared');
+    } else {
+      return error(res, 'Failed to clear emails', 500);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/admin/emails/html
+ * Export all emails as HTML report
+ */
+const exportEmailsAsHtml = async (req, res, next) => {
+  try {
+    if (req.user.access_level < 5) {
+      return error(res, 'Only administrators can access this endpoint', 403);
+    }
+
+    const { exportEmailsAsHtml: exportEmails } = require('../utils/localEmailService');
+    const html = exportEmails();
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getUsersTokenStatus,
   generateTokenForUser,
@@ -508,5 +622,10 @@ module.exports = {
   acknowledgeAlertsBulk,
   assignTeamToManager,
   removeTeamMember,
-  getManagerTeam
+  getManagerTeam,
+  getLocalEmailLog,
+  getEmailPreviewById,
+  getEmailsForRecipient,
+  clearLocalEmails,
+  exportEmailsAsHtml
 };

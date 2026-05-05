@@ -156,8 +156,19 @@ export default function MyDoorsScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
               
-              {/* Direct MQTT Control Panel */}
-              <DoorControlPanel doorId={door.door_id || door.id} doorName={door.door_name || door.name} />
+              {/* Availability Status */}
+              <View style={styles.availabilityRow}>
+                <View style={styles.availabilityItem}>
+                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                  <Text style={styles.availabilityLabel}>{door.available_from || '00:00'} - {door.available_to || '23:59'}</Text>
+                </View>
+                <View style={styles.availabilityItem}>
+                  <Ionicons name="checkmark-circle" size={12} color={door.is_available ? colors.success : colors.danger} />
+                  <Text style={[styles.availabilityLabel, { color: door.is_available ? colors.success : colors.danger }]}>
+                    {door.is_available ? 'Available' : 'Unavailable'}
+                  </Text>
+                </View>
+              </View>
             </View>
           ))
         ) : (
