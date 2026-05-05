@@ -15,6 +15,7 @@ const initializeEmailService = async () => {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,  // true for SSL on port 465
+      family: 4,     // Force IPv4 to avoid IPv6 connectivity issues
       connectionTimeout: 20000,  // 20 seconds
       greetingTimeout: 20000,    // 20 seconds
       socketTimeout: 20000,      // 20 seconds
@@ -123,8 +124,18 @@ const sendPasswordResetEmail = async (userId, email, fullName) => {
     return { success: true, message: 'Password reset code sent to your email' };
 
   } catch (err) {
-    console.error('❌ Password reset email failed:', err.message);
-    throw new Error('Failed to send password reset email');
+    console.error('❌ Password reset email failed:', {
+      message: err.message,
+      code: err.code,
+      errno: err.errno,
+      syscall: err.syscall,
+      address: err.address,
+      port: err.port,
+      hostname: err.hostname,
+      stack: err.stack
+    });
+    // Re-throw with enhanced context for caller to handle
+    throw new Error(`Failed to send password reset email: ${err.message}`);
   }
 };
 

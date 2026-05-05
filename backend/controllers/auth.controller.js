@@ -377,9 +377,21 @@ const requestPasswordReset = async (req, res, next) => {
     const user = rows[0];
 
     // Send password reset email
-    await sendPasswordResetEmail(user.user_id, user.email, user.full_name);
+    try {
+      await sendPasswordResetEmail(user.user_id, user.email, user.full_name);
+    } catch (emailErr) {
+      // Log detailed email error but still return success to client (security/UX)
+      console.error('⚠️ Password reset email delivery failed:', {
+        email: user.email,
+        message: emailErr.message,
+        code: emailErr.code,
+        syscall: emailErr.syscall,
+        address: emailErr.address
+      });
+      // Don't fail the request - token was created even if email failed
+    }
 
-    return success(res, {}, 'Password reset code sent to your email');
+    return success(res, {}, 'If the email exists, a reset code has been sent');
   } catch (err) {
     next(err);
   }

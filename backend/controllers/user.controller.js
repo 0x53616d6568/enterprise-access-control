@@ -16,6 +16,7 @@ const initializeEmailTransporter = async () => {
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,  // true for SSL on port 465
+      family: 4,     // Force IPv4 to avoid IPv6 connectivity issues
       connectionTimeout: 20000,  // 20 seconds
       greetingTimeout: 20000,    // 20 seconds
       socketTimeout: 20000,      // 20 seconds
