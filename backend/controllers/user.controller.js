@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 const { success, error } = require('../utils/response');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const { sendWelcomeEmail } = require('../utils/gmailService');
 // Generate temp password
 const generateTempPassword = () => {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';

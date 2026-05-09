@@ -15,7 +15,7 @@ const {
   sendPasswordResetEmail,
   verifyPasswordResetToken,
   resetPasswordWithToken,
-} = require('../utils/emailService');
+} = require('../utils/gmailService');
 
 // POST /api/auth/login
 const login = async (req, res, next) => {
