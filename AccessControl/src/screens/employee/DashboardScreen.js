@@ -186,8 +186,10 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
-  const today = data.att?.find(a => a && a.check_in && new Date(a.check_in).toDateString() === new Date().toDateString());
-  const weekHrs = data.att?.filter(a => a && a.check_in && new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1) || '0';
+  // Safe attendance stats with proper null checks
+  const validAtt = Array.isArray(data.att) ? data.att.filter(a => a && a.check_in) : [];
+  const today = validAtt.find(a => new Date(a.check_in).toDateString() === new Date().toDateString());
+  const weekHrs = validAtt.filter(a => new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
   const unread = data.notifs.filter(n => !n.is_read).length;
 
   if (loading) return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>;

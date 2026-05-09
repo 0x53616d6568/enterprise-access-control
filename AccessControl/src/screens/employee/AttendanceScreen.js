@@ -143,9 +143,13 @@ export default function AttendanceScreen() {
   const fetchAttendance = useCallback(async () => {
     try {
       const res = await api.get(API.MY_ATTENDANCE);
-      setAttendance(res.data.data || []);
+      // Ensure we get an array, filter out any null values
+      const data = res?.data?.data || [];
+      const validRecords = Array.isArray(data) ? data.filter(r => r && r.check_in) : [];
+      setAttendance(validRecords);
     } catch (err) {
       console.log('Attendance fetch error:', err.message);
+      setAttendance([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -316,10 +320,12 @@ export default function AttendanceScreen() {
                   {record ? (
                     <>
                       <Text style={styles.logTimes}>
-                        {new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {record.check_out
+                        {record && record.check_in
+                          ? new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '--:--'}
+                        {record?.check_out
                           ? ` → ${new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                          : ' → Active'}
+                          : record?.check_in ? ' → Active' : ''}
                       </Text>
                       <Text style={styles.logHours}>
                         {record.total_hours ? `${record.total_hours.toFixed(1)}h` : 'In progress'}

@@ -65,7 +65,7 @@ class DoorAccessTester:
         print(f"  ✅ Generated embedding: {len(embedding_base64)} bytes (base64)")
         return embedding_base64
     
-    def test_scenario_1(self, door_id=1, user_id=None):
+    def test_scenario_1(self, door_id=1, user_id=1):
         """
         Scenario 1: esp_test_embedding
         

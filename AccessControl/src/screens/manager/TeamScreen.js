@@ -88,7 +88,7 @@ export default function TeamScreen() {
 
   const getStatus = (userId) => {
     const rec = getTodayAttendance(userId);
-    if (!rec) return { label: 'Absent', color: colors.textMuted, bg: colors.bgCard, border: colors.border };
+    if (!rec || !rec.check_in) return { label: 'Absent', color: colors.textMuted, bg: colors.bgCard, border: colors.border };
     const checkIn = new Date(rec.check_in);
     const late = checkIn.getHours() >= 9 && checkIn.getMinutes() > 15;
     if (late) return { label: 'Late', color: colors.warning, bg: colors.warningBg, border: colors.warningBorder };
@@ -103,7 +103,7 @@ export default function TeamScreen() {
   const presentCount = users.filter(u => getTodayAttendance(u.user_id)).length;
   const lateCount    = users.filter(u => {
     const rec = getTodayAttendance(u.user_id);
-    if (!rec) return false;
+    if (!rec || !rec.check_in) return false;
     const h = new Date(rec.check_in);
     return h.getHours() >= 9 && h.getMinutes() > 15;
   }).length;

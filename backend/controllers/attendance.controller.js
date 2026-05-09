@@ -29,7 +29,7 @@ const getMyAttendance = async (req, res, next) => {
         d.location
       FROM attendance a
       LEFT JOIN doors d ON a.door_id = d.door_id
-      WHERE a.user_id = ?
+      WHERE a.user_id = ? AND a.check_in IS NOT NULL
     `;
 
     if (from) {
@@ -74,7 +74,7 @@ const getUserAttendance = async (req, res, next) => {
         d.location
       FROM attendance a
       LEFT JOIN doors d ON a.door_id = d.door_id
-      WHERE a.user_id = ?
+      WHERE a.user_id = ? AND a.check_in IS NOT NULL
     `;
 
     if (from) {
@@ -122,7 +122,7 @@ const getAllAttendance = async (req, res, next) => {
       FROM attendance a
       JOIN users u ON a.user_id = u.user_id
       LEFT JOIN doors d ON a.door_id = d.door_id
-      WHERE 1=1
+      WHERE a.check_in IS NOT NULL
     `;
 
     if (from) {

@@ -171,7 +171,7 @@ export default function CheckInOutCard({ onStatusChange }) {
 
   // Update elapsed time for active check-in
   useEffect(() => {
-    if (!status || status.check_out) return;
+    if (!status || !status.check_in || status.check_out) return;
 
     const updateElapsed = () => {
       const checkIn = new Date(status.check_in);
