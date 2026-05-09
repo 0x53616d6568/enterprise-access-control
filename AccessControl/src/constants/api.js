@@ -1,11 +1,11 @@
 // MQTT Testing Render Deployment
 // Deployed mqtt-testing branch with MQTT token system
-const BASE_URL = 'https://enterprise-access-control-mqtt.onrender.com/api';
+const BASE_URL = 'https://enterprise-access-control-x.onrender.com/api';
 
 // LOCAL DEV (COMMENTED OUT - for testing only):
 // To use localhost, change your machine's IP:
 // Run: ipconfig (PowerShell) and get IPv4 Address
-// Example: const BASE_URL = 'http://10.120.137.125:3000/api';
+//const BASE_URL = 'http://10.210.53.125:3000/api';
 
 export const API = {
   BASE_URL,
@@ -32,6 +32,10 @@ export const API = {
   MY_ATTENDANCE:   `${BASE_URL}/attendance/me`,
   USER_ATTENDANCE: (id) => `${BASE_URL}/attendance/user/${id}`,
   ALL_ATTENDANCE:  `${BASE_URL}/attendance`,
+  ATTENDANCE_STATUS: `${BASE_URL}/attendance/status/current`,
+  ATTENDANCE_CHECK_IN: `${BASE_URL}/attendance/check-in`,
+  ATTENDANCE_CHECK_OUT: `${BASE_URL}/attendance/check-out`,
+  ATTENDANCE:      `${BASE_URL}/attendance`,
 
   // Requests
   MY_REQUESTS:           `${BASE_URL}/requests/me`,

@@ -8,11 +8,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
+import CheckInOutCard from '../../components/CheckInOutCard';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 export default function AttendanceScreen() {
   const colors = useThemeColors();
+  const [expandedRecord, setExpandedRecord] = useState(null);
+  const [recordLogs, setRecordLogs] = useState({});
+  const [loadingLogs, setLoadingLogs] = useState(null);
 
   const styles = StyleSheet.create({
     safe:    { flex: 1, backgroundColor: colors.bg },
@@ -45,12 +49,18 @@ export default function AttendanceScreen() {
     sumLabel:  { color: colors.textMuted, fontSize: 11, marginBottom: 6 },
     sumValue:  { color: colors.textPrimary, fontSize: 18, fontWeight: '500', letterSpacing: -0.3 },
     sumSub:    { fontSize: 11, marginTop: 3 },
-    sectionHeader: { marginBottom: 12 },
+    sectionHeader: { marginBottom: 12, marginTop: 16 },
     sectionTitle:  { color: colors.textSecondary, fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' },
     logItem: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingVertical: 13,
       borderBottomWidth: 1, borderBottomColor: colors.bgCard,
+    },
+    logItemTouchable: {
+      backgroundColor: colors.bgHover,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      marginBottom: 8,
     },
     logDate: {
       width: 36, height: 36,
@@ -64,6 +74,11 @@ export default function AttendanceScreen() {
     logInfo:   { flex: 1 },
     logTimes:  { color: colors.textPrimary, fontSize: 13, fontWeight: '500', marginBottom: 2 },
     logHours:  { color: colors.textMuted, fontSize: 11 },
+    logCount: {
+      fontSize: 10,
+      color: colors.accent,
+      marginTop: 4,
+    },
     pill: {
       paddingHorizontal: 8, paddingVertical: 3,
       borderRadius: 6, borderWidth: 1,
@@ -72,6 +87,52 @@ export default function AttendanceScreen() {
     pillFull:    { backgroundColor: colors.successBg, borderColor: colors.successBorder },
     pillPartial: { backgroundColor: colors.warningBg, borderColor: colors.warningBorder },
     pillAbsent:  { backgroundColor: colors.dangerBg,  borderColor: colors.dangerBorder },
+    expandedSection: {
+      backgroundColor: colors.bgCard,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    logsList: {
+      marginTop: 8,
+    },
+    logAccess: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    logAccessLast: {
+      borderBottomWidth: 0,
+    },
+    logAccessLeft: {
+      flex: 1,
+    },
+    logAccessTime: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginBottom: 2,
+    },
+    logAccessMethod: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textPrimary,
+    },
+    logAccessBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      backgroundColor: colors.accent,
+    },
+    logAccessBadgeText: {
+      fontSize: 10,
+      color: '#fff',
+      fontWeight: '600',
+    },
   });
   
   const [attendance, setAttendance] = useState([]);
@@ -94,6 +155,34 @@ export default function AttendanceScreen() {
   useEffect(() => { fetchAttendance(); }, [fetchAttendance]);
 
   const onRefresh = () => { setRefreshing(true); fetchAttendance(); };
+
+  // Fetch access logs for a specific attendance record
+  const fetchAccessLogs = async (attendanceId) => {
+    try {
+      setLoadingLogs(attendanceId);
+      const res = await api.get(`${API.ATTENDANCE}/logs/${attendanceId}`);
+      setRecordLogs(prev => ({
+        ...prev,
+        [attendanceId]: res.data.data || [],
+      }));
+    } catch (err) {
+      console.log('Logs fetch error:', err.message);
+    } finally {
+      setLoadingLogs(null);
+    }
+  };
+
+  // Toggle expanded view for a record
+  const toggleExpanded = (attendanceId) => {
+    if (expandedRecord === attendanceId) {
+      setExpandedRecord(null);
+    } else {
+      setExpandedRecord(attendanceId);
+      if (!recordLogs[attendanceId]) {
+        fetchAccessLogs(attendanceId);
+      }
+    }
+  };
 
   // Build week strip (last 7 days)
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -150,6 +239,9 @@ export default function AttendanceScreen() {
           </Text>
         </View>
 
+        {/* Check-In/Check-Out Card */}
+        <CheckInOutCard onStatusChange={() => fetchAttendance()} />
+
         {/* Week strip */}
         <View style={styles.weekStrip}>
           {weekDays.map((day, i) => {
@@ -198,45 +290,116 @@ export default function AttendanceScreen() {
 
         {/* Log list */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>This week</Text>
+          <Text style={styles.sectionTitle}>History</Text>
         </View>
 
         {weekDays.slice().reverse().map((day, i) => {
           const record = getAttendanceForDate(day);
           const pill   = getPillStyle(record);
           const isToday = day.toDateString() === new Date().toDateString();
+          const isExpanded = expandedRecord === record?.attendance_id;
+          const logs = record ? recordLogs[record.attendance_id] : [];
+
           return (
-            <View key={i} style={styles.logItem}>
-              <View style={styles.logDate}>
-                <Text style={styles.logDateNum}>{day.getDate()}</Text>
-                <Text style={styles.logDateDay}>{DAYS[day.getDay()]}</Text>
-              </View>
-              <View style={styles.logInfo}>
-                {record ? (
-                  <>
-                    <Text style={styles.logTimes}>
-                      {new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {record.check_out
-                        ? ` → ${new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                        : ' → Active'}
-                    </Text>
-                    <Text style={styles.logHours}>
-                      {record.total_hours ? `${record.total_hours.toFixed(1)}h` : 'In progress'}
-                      {record.door_name ? ` · ${record.door_name}` : ''}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.logTimes}>—</Text>
-                    <Text style={styles.logHours}>
-                      {isToday ? 'Not checked in yet' : 'No check-in recorded'}
-                    </Text>
-                  </>
-                )}
-              </View>
-              <View style={[styles.pill, pill.style]}>
-                <Text style={[styles.pillText, { color: pill.color }]}>{pill.text}</Text>
-              </View>
+            <View key={i}>
+              <TouchableOpacity
+                style={[styles.logItem, styles.logItemTouchable]}
+                onPress={() => record && toggleExpanded(record.attendance_id)}
+              >
+                <View style={styles.logDate}>
+                  <Text style={styles.logDateNum}>{day.getDate()}</Text>
+                  <Text style={styles.logDateDay}>{DAYS[day.getDay()]}</Text>
+                </View>
+                <View style={styles.logInfo}>
+                  {record ? (
+                    <>
+                      <Text style={styles.logTimes}>
+                        {new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {record.check_out
+                          ? ` → ${new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : ' → Active'}
+                      </Text>
+                      <Text style={styles.logHours}>
+                        {record.total_hours ? `${record.total_hours.toFixed(1)}h` : 'In progress'}
+                        {record.door_name ? ` · ${record.door_name}` : ''}
+                      </Text>
+                      {record.log_count > 0 && (
+                        <Text style={styles.logCount}>
+                          {record.log_count} door access{record.log_count !== 1 ? 'es' : ''}
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.logTimes}>—</Text>
+                      <Text style={styles.logHours}>
+                        {isToday ? 'Not checked in yet' : 'No check-in recorded'}
+                      </Text>
+                    </>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {record && (
+                    <View style={[styles.pill, pill.style]}>
+                      <Text style={[styles.pillText, { color: pill.color }]}>{pill.text}</Text>
+                    </View>
+                  )}
+                  {record && (
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.textMuted}
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              {/* Expanded access logs */}
+              {isExpanded && record && (
+                <View style={styles.expandedSection}>
+                  {loadingLogs === record.attendance_id ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : logs.length > 0 ? (
+                    <View style={styles.logsList}>
+                      <Text style={{ fontSize: 11, color: colors.textMuted, marginBottom: 8 }}>
+                        ACCESS LOGS ({logs.length})
+                      </Text>
+                      {logs.map((log, idx) => (
+                        <View
+                          key={idx}
+                          style={[styles.logAccess, idx === logs.length - 1 && styles.logAccessLast]}
+                        >
+                          <View style={styles.logAccessLeft}>
+                            <Text style={styles.logAccessTime}>
+                              {new Date(log.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              })}
+                            </Text>
+                            <Text style={styles.logAccessMethod}>{log.reason || log.access_method}</Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.logAccessBadge,
+                              {
+                                backgroundColor:
+                                  log.result === 'granted' ? colors.success : colors.danger,
+                              },
+                            ]}
+                          >
+                            <Text style={styles.logAccessBadgeText}>
+                              {log.result === 'granted' ? 'Granted' : 'Denied'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ fontSize: 12, color: colors.textMuted }}>No access logs</Text>
+                  )}
+                </View>
+              )}
             </View>
           );
         })}
