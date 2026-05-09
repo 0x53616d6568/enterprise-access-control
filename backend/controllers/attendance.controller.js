@@ -26,8 +26,7 @@ const getMyAttendance = async (req, res, next) => {
         a.status,
         a.notes,
         d.door_name,
-        d.location,
-        (SELECT COUNT(*) FROM access_logs al WHERE al.attendance_id = a.attendance_id) as log_count
+        d.location
       FROM attendance a
       LEFT JOIN doors d ON a.door_id = d.door_id
       WHERE a.user_id = ?
@@ -72,8 +71,7 @@ const getUserAttendance = async (req, res, next) => {
         a.status,
         a.notes,
         d.door_name,
-        d.location,
-        (SELECT COUNT(*) FROM access_logs al WHERE al.attendance_id = a.attendance_id) as log_count
+        d.location
       FROM attendance a
       LEFT JOIN doors d ON a.door_id = d.door_id
       WHERE a.user_id = ?
@@ -120,8 +118,7 @@ const getAllAttendance = async (req, res, next) => {
         u.email,
         u.department,
         d.door_name,
-        d.location,
-        (SELECT COUNT(*) FROM access_logs al WHERE al.attendance_id = a.attendance_id) as log_count
+        d.location
       FROM attendance a
       JOIN users u ON a.user_id = u.user_id
       LEFT JOIN doors d ON a.door_id = d.door_id
@@ -219,11 +216,11 @@ const checkIn = async (req, res, next) => {
 
     const attendanceId = result.insertId;
 
-    // Log access event linked to attendance
+    // Log access event
     await connection.query(
-      `INSERT INTO access_logs (user_id, door_id, attendance_id, access_method, result, reason)
-       VALUES (?, ?, ?, 'api', 'granted', 'Check-in')`,
-      [userId, door_id, attendanceId]
+      `INSERT INTO access_logs (user_id, door_id, method, result, device_info)
+       VALUES (?, ?, 'api', 'granted', ?)`,
+      [userId, door_id, 'Check-in via mobile app']
     );
 
     await connection.commit();
@@ -293,9 +290,9 @@ const checkOut = async (req, res, next) => {
 
     // Log check-out event
     await connection.query(
-      `INSERT INTO access_logs (user_id, door_id, attendance_id, access_method, result, reason)
-       VALUES (?, ?, ?, 'api', 'granted', 'Check-out')`,
-      [userId, record.door_id, attendance_id]
+      `INSERT INTO access_logs (user_id, door_id, method, result, device_info)
+       VALUES (?, ?, 'api', 'granted', ?)`,
+      [userId, record.door_id, `Check-out via mobile app (${totalHours}h)`]
     );
 
     await connection.commit();
@@ -326,23 +323,36 @@ const getAttendanceLogs = async (req, res, next) => {
   try {
     const { attendance_id } = req.params;
 
+    // Get attendance record to find user and time range
+    const [attendance] = await db.query(
+      `SELECT user_id, check_in, check_out FROM attendance WHERE attendance_id = ?`,
+      [attendance_id]
+    );
+
+    if (!attendance.length) {
+      return error(res, 'Attendance record not found', 404);
+    }
+
+    const { user_id, check_in, check_out } = attendance[0];
+    const checkOutTime = check_out || new Date();
+
+    // Get access logs for this user during this time period
     const [logs] = await db.query(
       `SELECT 
         l.log_id,
         l.user_id,
         l.door_id,
-        l.access_method,
+        l.method,
         l.result,
-        l.face_confidence,
-        l.reason,
+        l.device_info,
         l.timestamp,
         d.door_name,
         d.location
       FROM access_logs l
       LEFT JOIN doors d ON l.door_id = d.door_id
-      WHERE l.attendance_id = ?
+      WHERE l.user_id = ? AND l.timestamp >= ? AND l.timestamp <= ?
       ORDER BY l.timestamp ASC`,
-      [attendance_id]
+      [user_id, check_in, checkOutTime]
     );
 
     return success(res, logs);
