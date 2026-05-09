@@ -36,29 +36,32 @@ function createRawMessage({ to, subject, htmlBody, textBody }) {
   const boundary = `__boundary_${Date.now()}__`;
   const from = process.env.GMAIL_FROM || process.env.GMAIL_USER || 'noreply@secureapp.com';
 
+  // RFC 2047 encode the subject line for UTF-8 support (emoji, special chars)
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`;
+
   const messageParts = [
     `MIME-Version: 1.0`,
     `To: ${to}`,
     `From: "SecureApp EAC" <${from}>`,
-    `Subject: ${subject}`,
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    `Subject: ${encodedSubject}`,
+    `Content-Type: multipart/alternative; charset="UTF-8"; boundary="${boundary}"`,
     ``,
     `--${boundary}`,
     `Content-Type: text/plain; charset="UTF-8"`,
-    `Content-Transfer-Encoding: 7bit`,
+    `Content-Transfer-Encoding: quoted-printable`,
     ``,
     textBody,
     ``,
     `--${boundary}`,
     `Content-Type: text/html; charset="UTF-8"`,
-    `Content-Transfer-Encoding: 7bit`,
+    `Content-Transfer-Encoding: quoted-printable`,
     ``,
     htmlBody,
     ``,
     `--${boundary}--`
   ];
 
-  const encoded = Buffer.from(messageParts.join('\r\n'))
+  const encoded = Buffer.from(messageParts.join('\r\n'), 'utf-8')
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
