@@ -192,7 +192,7 @@ export default function LoginScreen({ navigation }) {
     try {
       const result = await login(email.trim().toLowerCase(), password);
       if (result.is_first_login) {
-        navigation.replace('ChangePassword');
+        navigation.replace('InitialPasswordSetup');
       }
     } catch (err) {
       const message = err?.response?.data?.message || 'Login failed. Please try again.';
