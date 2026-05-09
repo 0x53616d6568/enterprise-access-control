@@ -80,6 +80,7 @@ export default function TeamScreen() {
 
   const getTodayAttendance = (userId) => {
     return attendance.find(a => {
+      if (!a || !a.check_in) return false;
       const d = new Date(a.check_in);
       return d.toDateString() === new Date().toDateString() && a.user_id === userId;
     });

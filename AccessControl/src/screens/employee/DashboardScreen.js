@@ -186,8 +186,8 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
-  const today = data.att.find(a => new Date(a.check_in).toDateString() === new Date().toDateString());
-  const weekHrs = data.att.filter(a => new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
+  const today = data.att?.find(a => a && a.check_in && new Date(a.check_in).toDateString() === new Date().toDateString());
+  const weekHrs = data.att?.filter(a => a && a.check_in && new Date(a.check_in) > new Date(Date.now() - 7 * 864e5)).reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1) || '0';
   const unread = data.notifs.filter(n => !n.is_read).length;
 
   if (loading) return <View style={styles.centered}><ActivityIndicator color={colors.accent} /></View>;
@@ -214,7 +214,7 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.statusValue}>{today ? (today.check_out ? 'Checked out' : 'Checked in') : 'Not checked in'}</Text>
             </View>
           </View>
-          <Text style={styles.metaText}>{today ? new Date(today.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
+          <Text style={styles.metaText}>{today && today.check_in ? new Date(today.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
         </View>
 
         <View style={styles.statsRow}>
