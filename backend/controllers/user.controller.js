@@ -1,52 +1,7 @@
-const bcrypt    = require('bcryptjs');
-const nodemailer = require('nodemailer');
-const db        = require('../config/db');
+const bcrypt = require('bcryptjs');
+const db = require('../config/db');
 const { success, error } = require('../utils/response');
-const { createLocalTransporter } = require('../utils/localEmailService');
-
-let transporter = null;
-let useLocalEmail = false;
-
-// Initialize Gmail OAuth2 transporter or fallback to local
-const initializeEmailTransporter = async () => {
-  try {
-    if (process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN) {
-      transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,  // true for SSL on port 465
-        family: 4,     // Force IPv4 to avoid IPv6 connectivity issues
-        connectionTimeout: 20000,  // 20 seconds
-        greetingTimeout: 20000,    // 20 seconds
-        socketTimeout: 20000,      // 20 seconds
-        auth: {
-          type: 'OAuth2',
-          user: process.env.GMAIL_USER,
-          clientId: process.env.GMAIL_CLIENT_ID,
-          clientSecret: process.env.GMAIL_CLIENT_SECRET,
-          refreshToken: process.env.GMAIL_REFRESH_TOKEN,
-        },
-      });
-
-      console.log('✅ User controller email transporter ready');
-    } else {
-      // Fallback to local email service
-      useLocalEmail = true;
-      transporter = createLocalTransporter();
-      console.log('📧 User controller using local email service');
-    }
-  } catch (err) {
-    console.warn('⚠️ Email transporter setup failed:', err.message);
-    useLocalEmail = true;
-    transporter = createLocalTransporter();
-    console.log('📧 User controller falling back to local email service');
-  }
-};
-
-// Initialize on load
-initializeEmailTransporter().catch(err => {
-  console.error('❌ Failed to initialize email transporter:', err.message);
-});
+const { sendWelcomeEmail } = require('../utils/emailService');
 // Generate temp password
 const generateTempPassword = () => {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
@@ -155,97 +110,8 @@ const createUser = async (req, res, next) => {
     console.log(`✅ [CREATE_USER] User inserted with ID: ${result.insertId}`);
 
     // Send welcome email asynchronously (don't block API response)
-    const sendWelcomeEmail = async () => {
-      if (!transporter) {
-        console.warn(`⚠️ [CREATE_USER] Email transporter not initialized for user ${email}`);
-        return;
-      }
-      try {
-        console.log(`📧 [CREATE_USER] Sending welcome email to ${email} (async)...`);
-        
-        // Send email without timeout wrapper - let nodemailer handle connection
-        await transporter.sendMail({
-          from:    `"SecureApp EAC" <${process.env.GMAIL_USER}>`,
-          to:      email,
-          subject: '🔐 Welcome to SecureApp — Your Account is Ready',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background-color: #0D1117; padding: 32px 20px; border-radius: 12px; color: #F0F6FC;">
-                <!-- Header -->
-                <div style="text-align: center; margin-bottom: 32px;">
-                  <div style="font-size: 32px; margin-bottom: 12px;">🔐</div>
-                  <h2 style="margin: 0; color: #2D7DD2; font-size: 24px;">Welcome to SecureApp!</h2>
-                </div>
-
-                <!-- Welcome Message -->
-                <p style="margin: 0 0 16px 0; font-size: 16px;">Hello <strong>${full_name}</strong>,</p>
-                <p style="margin: 0 0 24px 0; color: #8B949E;">
-                  Your enterprise access control account has been successfully created. You can now log in to access the system.
-                </p>
-
-                <!-- Credentials Box -->
-                <div style="background-color: #161B22; padding: 24px; border-radius: 8px; border: 2px solid #2D7DD2; margin: 32px 0;">
-                  <p style="margin: 0 0 12px 0; color: #8B949E; font-size: 12px; text-transform: uppercase;">Login Credentials</p>
-                  
-                  <div style="margin: 12px 0;">
-                    <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Email Address</p>
-                    <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all;">
-                      <strong>${email}</strong>
-                    </p>
-                  </div>
-
-                  <div style="margin: 16px 0;">
-                    <p style="margin: 0 0 6px 0; color: #58A6FF; font-size: 12px;">Temporary Password</p>
-                    <p style="margin: 0; font-family: 'Courier New', monospace; background-color: #0D1117; padding: 8px 12px; border-radius: 4px; word-break: break-all; font-size: 14px; letter-spacing: 1px;">
-                      <strong>${tempPassword}</strong>
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Important Notice -->
-                <div style="background-color: rgba(200, 48, 48, 0.1); padding: 16px; border-radius: 8px; border-left: 4px solid #C53030; margin: 24px 0;">
-                  <p style="margin: 0; color: #8B949E;">
-                    <strong style="color: #C53030;">⚠️ Important:</strong> You will be required to change your password on first login. Keep this temporary password safe and confidential.
-                  </p>
-                </div>
-
-                <!-- Login Instructions -->
-                <div style="background-color: #161B22; padding: 16px; border-radius: 8px; margin: 24px 0;">
-                  <p style="margin: 0 0 12px 0; color: #58A6FF; font-weight: bold;">3 Steps to Get Started:</p>
-                  <ol style="margin: 8px 0 0 20px; color: #8B949E; line-height: 1.8;">
-                    <li>Download or open the SecureApp mobile application</li>
-                    <li>Log in with the credentials above</li>
-                    <li>Change your password when prompted (minimum 8 characters)</li>
-                  </ol>
-                </div>
-
-                <!-- Support -->
-                <p style="margin: 32px 0 0 0; padding-top: 16px; border-top: 1px solid #21262D; color: #8B949E; font-size: 12px; line-height: 1.6;">
-                  If you encounter any issues logging in or have questions, please contact your system administrator.<br/>
-                  <strong style="color: #58A6FF;">Administrator Email:</strong> ${process.env.ADMIN_EMAIL || 'admin@secureapp.local'}
-                </p>
-                
-                <p style="margin: 8px 0 0 0; color: #8B949E; font-size: 11px;">
-                  © 2024 SecureApp Enterprise Access Control
-                </p>
-              </div>
-            </div>
-          `,
-        });
-        
-        console.log(`✅ [CREATE_USER] Welcome email sent successfully to ${email}`);
-      } catch (emailErr) {
-        console.error(`❌ [CREATE_USER] Background email failed for ${email}:`, {
-          message: emailErr.message,
-          code: emailErr.code,
-          response: emailErr.response
-        });
-      }
-    };
-
-    // Fire off email send in background (don't await)
-    sendWelcomeEmail().catch(err => 
-      console.error(`❌ [CREATE_USER] Uncaught error in background email:`, err.message)
+    sendWelcomeEmail(result.insertId, email, full_name, tempPassword).catch(err => 
+      console.error(`❌ [CREATE_USER] Background email failed:`, err.message)
     );
 
     // Return success immediately (user is created)
