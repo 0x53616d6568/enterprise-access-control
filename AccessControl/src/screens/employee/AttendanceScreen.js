@@ -193,6 +193,7 @@ export default function AttendanceScreen() {
 
   const getAttendanceForDate = (date) => {
     return attendance.find(a => {
+      if (!a || !a.check_in) return false;
       const d = new Date(a.check_in);
       return d.toDateString() === date.toDateString();
     });
@@ -210,6 +211,7 @@ export default function AttendanceScreen() {
   const thisWeekRecords = weekDays.map(d => getAttendanceForDate(d)).filter(Boolean);
   const weekHours = thisWeekRecords.reduce((s, a) => s + (a.total_hours || 0), 0).toFixed(1);
   const monthRecords = attendance.filter(a => {
+    if (!a || !a.check_in) return false;
     const d = new Date(a.check_in);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
