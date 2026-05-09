@@ -242,7 +242,7 @@ export default function CheckInOutCard({ onStatusChange }) {
         </View>
 
         {/* Status */}
-        {!status || status.check_out ? (
+        {!status || !status.check_in || status.check_out ? (
           // Not checked in
           <View style={styles.emptyState}>
             <Ionicons
@@ -288,7 +288,7 @@ export default function CheckInOutCard({ onStatusChange }) {
 
         {/* Action buttons */}
         <View style={styles.buttonContainer}>
-          {!status || status.check_out ? (
+          {!status || !status.check_in || status.check_out ? (
             <TouchableOpacity
               style={[styles.button, styles.buttonCheckIn]}
               onPress={handleCheckIn}
@@ -324,7 +324,7 @@ export default function CheckInOutCard({ onStatusChange }) {
 
       {/* Check-out confirmation modal */}
       <Modal
-        visible={showModal}
+        visible={showModal && status && status.check_in}
         transparent
         animationType="slide"
         onRequestClose={() => setShowModal(false)}
@@ -368,10 +368,10 @@ export default function CheckInOutCard({ onStatusChange }) {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
                   <Text style={{ fontSize: 12, color: colors.textMuted }}>CHECK-IN</Text>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textPrimary }}>
-                    {new Date(status.check_in).toLocaleTimeString('en-US', {
+                    {status.check_in ? new Date(status.check_in).toLocaleTimeString('en-US', {
                       hour: '2-digit',
                       minute: '2-digit',
-                    })}
+                    }) : '--:--'}
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>

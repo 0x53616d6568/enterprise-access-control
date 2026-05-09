@@ -8,7 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../services/apiService';
 import { API } from '../../constants/api';
 import useThemeColors from '../../hooks/useThemeColors';
-import CheckInOutCard from '../../components/CheckInOutCard';
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -244,9 +243,6 @@ export default function AttendanceScreen() {
             {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </Text>
         </View>
-
-        {/* Check-In/Check-Out Card */}
-        <CheckInOutCard onStatusChange={() => fetchAttendance()} />
 
         {/* Week strip */}
         <View style={styles.weekStrip}>
