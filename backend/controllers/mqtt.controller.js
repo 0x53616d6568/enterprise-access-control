@@ -106,6 +106,51 @@ const publishUnlockCommand = (doorId, userId, requestId) => {
 };
 
 /**
+ * Publish face auth request to MQTT (triggers PC door station to capture face)
+ * @param {number} doorId - Door ID
+ * @param {number} userId - User ID
+ * @param {number} requestId - Access request ID
+ * @param {string} tokenId - MQTT token ID
+ */
+const publishFaceAuthRequest = (doorId, userId, requestId, tokenId) => {
+  return new Promise((resolve) => {
+    try {
+      const client = getMqttClient();
+      const topic = `doors/${doorId}/access/request`;
+      const payload = JSON.stringify({
+        doorId: parseInt(doorId),
+        door_id: parseInt(doorId),
+        userId: parseInt(userId),
+        user_id: parseInt(userId),
+        requestId: parseInt(requestId),
+        request_id: parseInt(requestId),
+        tokenId: tokenId,
+        token_id: tokenId,
+        timestamp: new Date().toISOString(),
+        requiresFaceAuth: true
+      });
+
+      console.log(`\n[👤 MQTT Face Auth] Publishing to topic: ${topic}`);
+      console.log(`   Payload: ${payload}`);
+      console.log(`   Client connected: ${client.connected}`);
+
+      client.publish(topic, payload, { qos: 1 }, (err) => {
+        if (err) {
+          console.error(`❌ [MQTT Face Auth] Publish failed: ${err.message}`);
+          resolve(false);
+        } else {
+          console.log(`✅ [MQTT Face Auth] Request published successfully`);
+          resolve(true);
+        }
+      });
+    } catch (err) {
+      console.error(`❌ [MQTT Face Auth] Publish error: ${err.message}`);
+      resolve(false);
+    }
+  });
+};
+
+/**
  * POST /api/mqtt/token/generate
  * Generate a new MQTT token for the current user
  */
@@ -273,6 +318,12 @@ const requestDoorAccess = async (req, res, next) => {
       await updateAccessRequest(requestData.requestId, 'FACE_AUTH_REQUIRED', {
         face_auth_required: true
       });
+
+      // Publish face auth request to MQTT (for PC door station)
+      console.log(`[MQTT Face Auth] Publishing face auth request for doorId=${doorId}, userId=${userId}, requestId=${requestData.requestId}`);
+      publishFaceAuthRequest(doorId, userId, requestData.requestId, tokenId).catch(err => {
+        console.error('[MQTT] Failed to publish face auth request:', err.message);
+      });
     } else {
       // No face auth required - grant access
       await updateAccessRequest(requestData.requestId, 'ACCESS_GRANTED', {
@@ -423,7 +474,14 @@ const getAccessHistory = async (req, res, next) => {
  */
 const verifyAccessRequest = async (req, res, next) => {
   try {
-    const { requestId, tokenHash, doorId } = req.body;
+    const {
+      requestId,
+      tokenHash,
+      doorId,
+      faceAuthPassed = null,
+      faceSimilarity = null,
+      recognizedUserId = null
+    } = req.body;
 
     if (!requestId || !tokenHash || !doorId) {
       return error(res, 'requestId, tokenHash, and doorId are required', 400);
@@ -458,13 +516,56 @@ const verifyAccessRequest = async (req, res, next) => {
       return error(res, 'Request expired', 401);
     }
 
-    // 4. Check if face auth was required and passed
-    if (request.requires_face_auth && !request.face_auth_passed) {
-      return success(res, {
-        granted: false,
-        reason: 'FACE_AUTH_REQUIRED',
-        requestId
-      });
+    // 4. Check face authentication state
+    if (request.requires_face_auth) {
+      if (typeof faceAuthPassed !== 'boolean' && !request.face_auth_passed) {
+        return success(res, {
+          granted: false,
+          reason: 'FACE_AUTH_REQUIRED',
+          requestId,
+          requiresFaceAuth: true
+        });
+      }
+
+      if (typeof faceAuthPassed === 'boolean') {
+        if (!faceAuthPassed) {
+          await updateAccessRequest(requestId, 'FACE_AUTH_FAILED', {
+            face_auth_passed: false,
+            face_auth_timestamp: new Date(),
+            access_result: 'DENIED',
+            denial_reason: 'Face authentication failed'
+          });
+
+          await logMqttActivity(
+            request.user_id,
+            tokenVerification.tokenId,
+            'FACE_AUTH_FAILED',
+            `Request ID: ${requestId}; similarity=${faceSimilarity ?? 'n/a'}; recognizedUserId=${recognizedUserId ?? 'n/a'}`,
+            requestId
+          );
+
+          return success(res, {
+            granted: false,
+            reason: 'FACE_AUTH_FAILED',
+            requestId,
+            faceSimilarity,
+            recognizedUserId
+          });
+        }
+
+        await updateAccessRequest(requestId, 'FACE_AUTH_PASSED', {
+          face_auth_passed: true,
+          face_auth_timestamp: new Date()
+        });
+
+        await logMqttActivity(
+          request.user_id,
+          tokenVerification.tokenId,
+          'FACE_AUTH_PASSED',
+          `Request ID: ${requestId}; similarity=${faceSimilarity ?? 'n/a'}; recognizedUserId=${recognizedUserId ?? 'n/a'}`,
+          requestId
+        );
+      }
     }
 
     // 5. Verify door access
@@ -484,11 +585,16 @@ const verifyAccessRequest = async (req, res, next) => {
 
     await logMqttActivity(request.user_id, null, 'ACCESS_VERIFIED', `Door ID: ${doorId}`, requestId);
 
+    const mqttSent = await publishUnlockCommand(doorId, request.user_id, requestId);
+
     return success(res, {
       granted: true,
       requestId,
       userId: request.user_id,
-      doorId
+      doorId,
+      faceSimilarity,
+      recognizedUserId,
+      mqtt_sent: mqttSent
     });
   } catch (err) {
     next(err);
