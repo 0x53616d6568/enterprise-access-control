@@ -13,6 +13,7 @@ const {
   revokeAllTokens,
   requestDoorAccess,
   submitFaceAuth,
+  submitFaceAuthToken,
   getRequestStatus,
   getAccessHistory,
   verifyAccessRequest
@@ -41,8 +42,11 @@ router.post('/tokens/revoke-all', authenticate, revokeAllTokens);
 // Create new access request (user presses button)
 router.post('/request-access', authenticate, requestDoorAccess);
 
-// Submit face authentication for access request
+// Submit face authentication for access request (JWT authenticated - for app)
 router.post('/request/:requestId/face-auth', authenticate, submitFaceAuth);
+
+// Submit face authentication using MQTT token (for PC door station - no JWT required)
+router.post('/request/:requestId/face-auth/token', submitFaceAuthToken);
 
 // Get access request status
 router.get('/request/:requestId/status', authenticate, getRequestStatus);

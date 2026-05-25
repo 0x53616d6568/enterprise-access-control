@@ -422,6 +422,101 @@ const submitFaceAuth = async (req, res, next) => {
 };
 
 /**
+ * POST /api/mqtt/request/:requestId/face-auth/token
+ * Submit face authentication for an access request (token-based, for PC door station)
+ * No JWT required - validates using MQTT tokenHash
+ * 
+ * Body: { tokenHash, faceAuthPassed, faceSimilarity, recognizedUserId }
+ */
+const submitFaceAuthToken = async (req, res, next) => {
+  try {
+    const { requestId } = req.params;
+    const { tokenHash, faceAuthPassed, faceSimilarity, recognizedUserId } = req.body;
+
+    if (!tokenHash) {
+      return error(res, 'tokenHash required', 400);
+    }
+
+    // Verify the MQTT token exists and is not revoked
+    const [tokens] = await db.query(
+      `SELECT id, user_id, expires_at, is_revoked FROM mqtt_tokens WHERE id = ? OR token_hash = ?`,
+      [tokenHash, tokenHash]
+    );
+
+    if (!tokens.length || tokens[0].is_revoked) {
+      return error(res, 'Invalid or revoked token', 401);
+    }
+
+    const token = tokens[0];
+    const userId = token.user_id;
+
+    // Check if token is expired
+    if (new Date(token.expires_at) < new Date()) {
+      return error(res, 'Token expired', 401);
+    }
+
+    // Verify request exists and belongs to this user
+    const [requests] = await db.query(
+      `SELECT id, door_id, status FROM mqtt_access_requests WHERE id = ? AND user_id = ?`,
+      [requestId, userId]
+    );
+
+    if (!requests.length) {
+      return error(res, 'Request not found', 404);
+    }
+
+    const request = requests[0];
+
+    if (request.status !== 'FACE_AUTH_REQUIRED') {
+      return error(res, 'Face auth not required for this request', 400);
+    }
+
+    // Update request based on face auth result
+    if (faceAuthPassed) {
+      await updateAccessRequest(requestId, 'FACE_AUTH_PASSED', {
+        face_auth_passed: true,
+        face_auth_timestamp: new Date(),
+        face_similarity: faceSimilarity || 0,
+        recognized_user_id: recognizedUserId,
+        access_result: 'GRANTED'
+      });
+
+      // Also update to ACCESS_GRANTED for consistency
+      await updateAccessRequest(requestId, 'ACCESS_GRANTED', {
+        access_result: 'GRANTED'
+      });
+
+      await logMqttActivity(userId, null, 'FACE_AUTH_PASSED', `Request ID: ${requestId}, Similarity: ${faceSimilarity}`);
+
+      // Publish unlock command to MQTT after face auth passes (async, non-blocking)
+      publishUnlockCommand(request.door_id, userId, requestId).catch(err => {
+        console.error('[MQTT] Failed to publish unlock command after face auth:', err.message);
+      });
+
+      return success(res, {
+        requestId,
+        status: 'ACCESS_GRANTED',
+        message: 'Face authentication passed. Access granted.'
+      });
+    } else {
+      await updateAccessRequest(requestId, 'FACE_AUTH_FAILED', {
+        face_auth_passed: false,
+        face_auth_timestamp: new Date(),
+        face_similarity: faceSimilarity || 0,
+        access_result: 'DENIED',
+        denial_reason: 'Face authentication failed'
+      });
+
+      await logMqttActivity(userId, null, 'FACE_AUTH_FAILED', `Request ID: ${requestId}`);
+
+      return error(res, 'Face authentication failed', 401);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/mqtt/request/:requestId/status
  * Get current status of an access request
  */
@@ -608,6 +703,7 @@ module.exports = {
   revokeAllTokens,
   requestDoorAccess,
   submitFaceAuth,
+  submitFaceAuthToken,
   getRequestStatus,
   getAccessHistory,
   verifyAccessRequest
