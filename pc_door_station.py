@@ -304,13 +304,14 @@ class DoorStation:
             raise RuntimeError("MQTT request must include requestId, tokenHash, and doorId")
 
         backend_payload = {
+            "tokenHash": str(token_hash),
             "faceAuthPassed": bool(recognition.get("authorized")),
             "faceSimilarity": recognition.get("similarity", 0.0),
             "recognizedUserId": recognition.get("recognized_user_id"),
         }
 
-        # Build full URL with requestId
-        verify_url = f"{self.config.backend_verify_url}/{request_id}/face-auth"
+        # Build URL using token-based endpoint (no JWT required)
+        verify_url = f"{self.config.backend_verify_url}/{request_id}/face-auth/token"
 
         response = requests.post(
             verify_url,
