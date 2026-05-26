@@ -78,6 +78,14 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
   const [cameraFacing, setCameraFacing] = useState('front');
   const [useGallery, setUseGallery] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  
+  // Multi-frame capture state
+  const [frameCount, setFrameCount] = useState(0); // 0, 1, 2 (for 3 frames)
+  const [capturedFrames, setCapturedFrames] = useState([]); // Array of base64 images
+  const [isProcessing, setIsProcessing] = useState(false); // Background processing
+  const [processingProgress, setProcessingProgress] = useState(''); // e.g. "Processing frame 1/3..."
+  const [countdownSeconds, setCountdownSeconds] = useState(0); // For delay between captures
+  
   const cameraRef = useRef(null);
 
   // Fetch current enrollment count when component mounts
@@ -139,13 +147,96 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
         'Enrollment Failed',
         err.message || 'Could not process face. Please try again.',
         [
-          { text: 'Try Again', onPress: () => setErrorMessage(null) },
+          { text: 'Try Again', onPress: () => { setErrorMessage(null); resetCapture(); } },
         ],
         { cancelable: false }
       );
     } finally {
       setCapturing(false);
       setUseGallery(false);
+    }
+  };
+
+  // Countdown timer for delay between captures
+  React.useEffect(() => {
+    if (countdownSeconds <= 0) return;
+    
+    const timer = setTimeout(() => {
+      setCountdownSeconds(countdownSeconds - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdownSeconds]);
+
+  // Reset multi-frame capture state
+  const resetCapture = () => {
+    setFrameCount(0);
+    setCapturedFrames([]);
+    setIsProcessing(false);
+    setProcessingProgress('');
+    setCountdownSeconds(0);
+  };
+
+  // Capture single frame and prepare for next
+  const captureFrame = async () => {
+    if (!cameraRef.current) return;
+    
+    setCapturing(true);
+    setErrorMessage(null);
+    
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.95, // High quality for better accuracy
+        base64: true,
+      });
+
+      const newFrames = [...capturedFrames, photo.base64];
+      setCapturedFrames(newFrames);
+      const newFrameCount = frameCount + 1;
+      setFrameCount(newFrameCount);
+
+      console.log(`✅ Captured frame ${newFrameCount}/3 (${photo.base64.length} chars)`);
+
+      // If all 3 frames captured, start enrollment
+      if (newFrameCount === 3) {
+        console.log('All 3 frames captured, starting enrollment with background processing...');
+        setStep(2);
+        setProcessingProgress('Processing frame 1/3...');
+        setIsProcessing(true);
+
+        try {
+          const result = await enrollUserFace(targetUser.user_id, newFrames);
+          setEnrollmentCount(result.total_embeddings || enrollmentCount + 1);
+          setProcessingProgress('');
+          setStep(3);
+          setTimeout(() => {
+            setEnrolled(true);
+            setStep(4);
+            resetCapture();
+          }, 1000);
+        } catch (err) {
+          console.error('Enrollment error:', err);
+          setProcessingProgress('');
+          setIsProcessing(false);
+          setStep(1);
+          setErrorMessage(err.message || 'Could not process faces. Please try again.');
+          Alert.alert(
+            'Enrollment Failed',
+            err.message || 'Could not process faces. Please try again.',
+            [
+              { text: 'Try Again', onPress: () => { setErrorMessage(null); resetCapture(); } },
+            ],
+            { cancelable: false }
+          );
+        }
+      } else {
+        // Show countdown before next capture
+        setCountdownSeconds(2); // 2 second delay to let user reposition
+        setProcessingProgress(`Frame ${newFrameCount}/3 captured. Prepare for next...`);
+      }
+    } catch (err) {
+      Alert.alert('Capture failed', err.message || 'Could not capture photo.');
+      setCapturing(false);
     }
   };
 
@@ -312,44 +403,105 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
           })}
         </View>
 
-        {/* Action button */}
+        {/* Multi-frame capture UI */}
         {!enrolled && targetUser && permission.granted && step === 1 && (
-          <TouchableOpacity
-            style={[styles.enrollBtn, capturing && { opacity: 0.6 }]}
-            onPress={async () => {
-              if (!cameraRef.current) return;
-              setCapturing(true);
-              setErrorMessage(null);
-              try {
-                // Capture 3 frames at 300ms intervals for better accuracy (multi-frame enrollment)
-                const frames = [];
-                for (let i = 0; i < 3; i++) {
-                  console.log(`Capturing frame ${i + 1}/3...`);
-                  const photo = await cameraRef.current.takePictureAsync({
-                    quality: 0.95, // Increased from 0.8 for better image quality
-                    base64: true,
-                  });
-                  frames.push(photo.base64);
-                  
-                  // Wait 300ms between frames for natural variation
-                  if (i < 2) {
-                    await new Promise(r => setTimeout(r, 300));
-                  }
-                }
-                console.log(`Successfully captured ${frames.length} frames for multi-frame enrollment`);
-                handleEnrollment(frames); // Pass array of frames
-              } catch (err) {
-                Alert.alert('Capture failed', err.message || 'Could not capture photos.');
-                setCapturing(false);
-              }
-            }}
-            disabled={capturing}
-          >
-            {capturing
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.enrollBtnText}>Capture &amp; Enroll (3 frames)</Text>
-            }
-          </TouchableOpacity>
+          <>
+            {/* Frame counter and instructions */}
+            <View style={{ 
+              backgroundColor: colors.bgCard, 
+              borderWidth: 1, 
+              borderColor: colors.border,
+              borderRadius: 12, 
+              padding: 16, 
+              marginBottom: 16,
+              alignItems: 'center'
+            }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+                MULTI-FRAME ENROLLMENT
+              </Text>
+              <Text style={{ 
+                color: colors.textPrimary, 
+                fontSize: 24, 
+                fontWeight: 'bold',
+                marginBottom: 12
+              }}>
+                Frame {frameCount + 1}/3
+              </Text>
+              
+              {frameCount === 0 && (
+                <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
+                  Look straight at camera
+                </Text>
+              )}
+              {frameCount === 1 && (
+                <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
+                  Tilt your head slightly left
+                </Text>
+              )}
+              {frameCount === 2 && (
+                <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: 'center' }}>
+                  Tilt your head slightly right
+                </Text>
+              )}
+
+              {/* Countdown timer */}
+              {countdownSeconds > 0 && (
+                <View style={{ 
+                  marginTop: 12, 
+                  paddingTop: 12, 
+                  borderTopWidth: 1, 
+                  borderTopColor: colors.border,
+                  width: '100%',
+                  alignItems: 'center'
+                }}>
+                  <Text style={{ color: colors.accent, fontSize: 28, fontWeight: 'bold' }}>
+                    {countdownSeconds}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
+                    seconds to reposition
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Capture / Next button */}
+            <TouchableOpacity
+              style={[
+                styles.enrollBtn, 
+                (capturing || countdownSeconds > 0) && { opacity: 0.6 }
+              ]}
+              onPress={captureFrame}
+              disabled={capturing || countdownSeconds > 0}
+            >
+              {capturing ? (
+                <ActivityIndicator color="#fff" />
+              ) : frameCount === 0 ? (
+                <Text style={styles.enrollBtnText}>Capture Frame 1</Text>
+              ) : frameCount < 3 ? (
+                <Text style={styles.enrollBtnText}>Next ({frameCount}/3)</Text>
+              ) : (
+                <Text style={styles.enrollBtnText}>Processing...</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Processing status */}
+            {isProcessing && (
+              <View style={{ 
+                backgroundColor: colors.bgCard, 
+                borderWidth: 1, 
+                borderColor: colors.border,
+                borderRadius: 12, 
+                padding: 12, 
+                marginTop: 12,
+                alignItems: 'center'
+              }}>
+                <ActivityIndicator color={colors.accent} size="small" />
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>
+                  {processingProgress || 'Processing...'}
+                </Text>
+              </View>
+            )}
+          </>
         )}
 
         {enrolled && (
