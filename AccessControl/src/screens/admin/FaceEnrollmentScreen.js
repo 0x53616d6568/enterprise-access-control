@@ -218,6 +218,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
         }
       } else {
         // Continue to next frame immediately (no countdown)
+        setCapturing(false); // Reset button state so user can click again
         setProcessingProgress(`Frame ${newFrameCount}/3 captured. Click for next...`);
       }
     } catch (err) {
