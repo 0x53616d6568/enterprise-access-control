@@ -55,6 +55,9 @@ class FaceRecognitionModel:
                     filepath = os.path.join(Config.FACE_DB_PATH, file)
                     
                     emb = np.load(filepath)
+                    # Flatten to 1D if needed (handle (1,512) shape)
+                    if emb.ndim > 1:
+                        emb = emb.flatten()
                     emb = emb / np.linalg.norm(emb)  # normalize (from your code)
                     
                     self.face_database[user_id] = emb
@@ -208,7 +211,10 @@ class FaceRecognitionModel:
         Calculate cosine similarity between two vectors
         (from your recognize_face.py: def cosine_similarity(a, b): return np.dot(a, b))
         """
-        return float(np.dot(a, b))
+        # Flatten to 1D if needed to handle shape mismatches
+        a_flat = a.flatten() if a.ndim > 1 else a
+        b_flat = b.flatten() if b.ndim > 1 else b
+        return float(np.dot(a_flat, b_flat))
     
     def delete_embedding(self, user_id: int) -> bool:
         """Delete embedding for user"""
