@@ -1,5 +1,7 @@
 import { api } from './apiService';
 import { API } from '../constants/api';
+import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
 
 /**
  * Face Recognition Service
@@ -38,11 +40,12 @@ export const enrollUserFace = async (userId, imageBase64) => {
 
   try {
     // Support both single image and array of images
+    const isMultiFrame = Array.isArray(imageBase64);
     const payload = {
       user_id: userId,
     };
 
-    if (Array.isArray(imageBase64)) {
+    if (isMultiFrame) {
       payload.images_base64 = imageBase64;
       console.log(`Enrolling user ${userId} with ${imageBase64.length} frames (multi-frame mode)`);
     } else {
@@ -50,7 +53,28 @@ export const enrollUserFace = async (userId, imageBase64) => {
       console.log(`Enrolling user ${userId} with single frame`);
     }
 
-    const response = await api.post(API.FACE_ENROLL, payload);
+    // Use axios with longer timeout for multi-frame enrollment
+    // Single frame: 30s, Multi-frame (3 frames): 3 min (upload + 3x processing time)
+    const timeout = isMultiFrame ? 180000 : 30000;
+    
+    // Create custom axios instance with extended timeout for this request
+    const customApi = axios.create({
+      baseURL: API.BASE_URL,
+      timeout: timeout,
+    });
+
+    // Copy token from secure store if available
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (token) {
+        customApi.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn('Could not retrieve auth token:', e.message);
+    }
+
+    console.log(`Face enrollment timeout: ${timeout}ms (${isMultiFrame ? 'multi-frame' : 'single-frame'})`);
+    const response = await customApi.post(API.FACE_ENROLL, payload);
 
     return response.data.data;
   } catch (err) {
