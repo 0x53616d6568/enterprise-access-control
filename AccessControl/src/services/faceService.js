@@ -14,27 +14,42 @@ export const FaceService = {
    */
   enrollFace: async (userId, imageBase64) => {
     try {
-      const response = await fetch(`${API.BASE_URL}/face/enroll`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          image_base64: imageBase64,
-        }),
-      });
+      // Use AbortController with longer timeout for face processing (3 minutes)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 180 seconds = 3 minutes
+      
+      try {
+        const response = await fetch(`${API.BASE_URL}/face/enroll`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            image_base64: imageBase64,
+          }),
+          signal: controller.signal, // Add abort signal for timeout
+        });
 
-      const data = await response.json();
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Face enrollment failed');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || data.error || 'Face enrollment failed');
+        }
+
+        return {
+          success: true,
+          data: data.data,
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Face enrollment timed out. Please try again with a better photo.');
+        }
+        throw error;
       }
-
-      return {
-        success: true,
-        data: data.data,
-      };
     } catch (error) {
       console.error('Face enrollment error:', error);
       return {

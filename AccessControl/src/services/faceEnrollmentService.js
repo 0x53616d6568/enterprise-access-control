@@ -40,7 +40,34 @@ export const enrollUserFace = async (userId, base64Image) => {
 
     return response.data.data;
   } catch (err) {
-    throw new Error(`Face enrollment failed: ${err.response?.data?.message || err.message}`);
+    // Provide more specific error messages based on error type
+    if (err.message?.includes('timeout')) {
+      throw new Error('Face processing took too long. This can happen with large images.\n\nPlease try again with a clearer photo.');
+    }
+    
+    if (err.response?.status === 404) {
+      throw new Error('User not found in database.');
+    }
+    
+    if (err.response?.status === 400) {
+      const errorMsg = err.response?.data?.message || err.response?.data?.error;
+      if (errorMsg?.includes('No face detected')) {
+        throw new Error('No face detected in image.\n\nMake sure:\n• Your face is clearly visible\n• Good lighting\n• Face fills 30-50% of frame\n• Remove glasses/mask if needed');
+      }
+      throw new Error(errorMsg || 'Invalid request. Please try again.');
+    }
+
+    if (err.response?.status === 500) {
+      throw new Error('Server error. Please try again later.');
+    }
+
+    // Network or other errors
+    throw new Error(
+      err.response?.data?.message || 
+      err.response?.data?.error || 
+      err.message || 
+      'Face enrollment failed. Please check your connection and try again.'
+    );
   }
 };
 

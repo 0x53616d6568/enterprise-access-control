@@ -27,12 +27,14 @@ export default function AddDoorScreen({ navigation }) {
     field:       { marginBottom: 18 },
     label:       { color: colors.textMuted, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
     input:       { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 13, color: colors.textPrimary, fontSize: 13 },
-    levelGrid:   { gap: 8 },
+    levelSummary: { flex: 1 },
+    levelSummaryText: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
+    levelSummarySub: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+    levelPicker: { marginTop: 4, gap: 8 },
     levelOpt:    { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
     levelBadge:  { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
     levelBadgeText: { fontSize: 12, fontWeight: '600' },
     levelLabel:  { color: colors.textSecondary, fontSize: 13, fontWeight: '500', flex: 1 },
-    levelSub:    { color: colors.textMuted, fontSize: 11 },
     toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14 },
     toggleLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
     toggleIcon:  { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -53,9 +55,11 @@ export default function AddDoorScreen({ navigation }) {
   });
 
   const SECURITY_LEVELS = [
-    { level: 1, label: 'Level 1 — Standard',   sub: 'MQTT token',          color: colors.success,  bg: colors.successBg,  border: colors.successBorder },
-    { level: 3, label: 'Level 3 — Elevated',   sub: 'MQTT + manager rule', color: colors.warning,  bg: colors.warningBg,  border: colors.warningBorder },
-    { level: 5, label: 'Level 5 — High Security', sub: 'MQTT + Face auth',  color: colors.danger,   bg: colors.dangerBg,   border: colors.dangerBorder },
+    { level: 1, label: 'Level 1 — Standard',   color: colors.success,  bg: colors.successBg,  border: colors.successBorder },
+    { level: 2, label: 'Level 2 — Guarded',     color: colors.accent,   bg: colors.bgDeep,     border: colors.accentDark },
+    { level: 3, label: 'Level 3 — Elevated',    color: colors.warning,  bg: colors.warningBg,  border: colors.warningBorder },
+    { level: 4, label: 'Level 4 — Restricted',  color: '#fb8500',       bg: '#2b1b00',         border: '#7a4a00' },
+    { level: 5, label: 'Level 5 — High Security', color: colors.danger, bg: colors.dangerBg,   border: colors.dangerBorder },
   ];
   const [doorName,      setDoorName]      = useState('');
   const [location,      setLocation]      = useState('');
@@ -64,7 +68,10 @@ export default function AddDoorScreen({ navigation }) {
   const [fallback,      setFallback]      = useState('NONE');
   const [requiresFace,  setRequiresFace]  = useState(false);
   const [loading,       setLoading]       = useState(false);
+  const [showSecurityLevel, setShowSecurityLevel] = useState(false);
   const [showFallback,  setShowFallback]  = useState(false);
+
+  const selectedLevel = SECURITY_LEVELS.find(s => s.level === securityLevel) || SECURITY_LEVELS[0];
 
   // Auto-set requiresFace when level 5 is selected
   const handleLevelSelect = (level) => {
@@ -154,26 +161,40 @@ export default function AddDoorScreen({ navigation }) {
           {/* Security level */}
           <View style={styles.field}>
             <Text style={styles.label}>Security Level</Text>
-            <View style={styles.levelGrid}>
-              {SECURITY_LEVELS.map(s => (
-                <TouchableOpacity
-                  key={s.level}
-                  style={[
-                    styles.levelOpt,
-                    securityLevel === s.level && { borderColor: s.color, backgroundColor: s.bg },
-                  ]}
-                  onPress={() => handleLevelSelect(s.level)}
-                >
-                  <View style={[styles.levelBadge, { backgroundColor: s.bg, borderColor: s.border }]}>
-                    <Text style={[styles.levelBadgeText, { color: s.color }]}>{s.level}</Text>
-                  </View>
-                  <Text style={[styles.levelLabel, securityLevel === s.level && { color: colors.textPrimary }]}>
-                    {s.label}
-                  </Text>
-                  <Text style={styles.levelSub}>{s.sub}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <TouchableOpacity
+              style={styles.selectBtn}
+              onPress={() => setShowSecurityLevel(!showSecurityLevel)}
+            >
+              <View style={styles.levelSummary}>
+                <Text style={styles.levelSummaryText}>{selectedLevel.label}</Text>
+                <Text style={styles.levelSummarySub}>Choose a security level from 1 to 5</Text>
+              </View>
+              <Ionicons name={showSecurityLevel ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+            {showSecurityLevel && (
+              <View style={styles.levelPicker}>
+                {SECURITY_LEVELS.map(s => (
+                  <TouchableOpacity
+                    key={s.level}
+                    style={[
+                      styles.levelOpt,
+                      securityLevel === s.level && { borderColor: s.color, backgroundColor: s.bg },
+                    ]}
+                    onPress={() => {
+                      handleLevelSelect(s.level);
+                      setShowSecurityLevel(false);
+                    }}
+                  >
+                    <View style={[styles.levelBadge, { backgroundColor: s.bg, borderColor: s.border }]}>
+                      <Text style={[styles.levelBadgeText, { color: s.color }]}>{s.level}</Text>
+                    </View>
+                    <Text style={[styles.levelLabel, securityLevel === s.level && { color: colors.textPrimary }]}>
+                      {s.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Face auth toggle */}
@@ -194,7 +215,7 @@ export default function AddDoorScreen({ navigation }) {
                   <Text style={[styles.toggleLabel, requiresFace && { color: colors.textPrimary }]}>
                     Require face recognition
                   </Text>
-                  <Text style={styles.toggleSub}>Enables ArcFace Layer 2 auth</Text>
+                  <Text style={styles.toggleSub}>Enables 2nd layer auth</Text>
                 </View>
               </View>
               <View style={[styles.checkbox, requiresFace && styles.checkboxActive]}>

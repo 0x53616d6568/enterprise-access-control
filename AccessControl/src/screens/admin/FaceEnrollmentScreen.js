@@ -77,6 +77,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
   const [enrollmentCount, setEnrollmentCount] = useState(0);
   const [cameraFacing, setCameraFacing] = useState('front');
   const [useGallery, setUseGallery] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const cameraRef = useRef(null);
 
   // Fetch current enrollment count when component mounts
@@ -119,6 +120,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
 
   const handleEnrollment = async (base64Image) => {
     setCapturing(true);
+    setErrorMessage(null);
     try {
       setStep(2);
       const result = await enrollUserFace(targetUser.user_id, base64Image);
@@ -129,8 +131,18 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
         setStep(4);
       }, 1000);
     } catch (err) {
-      Alert.alert('Enrollment failed', err.message || 'Could not process face. Please try again.');
+      console.error('Enrollment error:', err);
       setStep(1);
+      setErrorMessage(err.message || 'Could not process face. Please try again.');
+      // Show alert with better formatting
+      Alert.alert(
+        'Enrollment Failed',
+        err.message || 'Could not process face. Please try again.',
+        [
+          { text: 'Try Again', onPress: () => setErrorMessage(null) },
+        ],
+        { cancelable: false }
+      );
     } finally {
       setCapturing(false);
       setUseGallery(false);

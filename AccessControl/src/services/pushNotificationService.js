@@ -6,6 +6,7 @@ import { API } from '../constants/api';
 
 // Check if we're running in Expo Go (push notifications won't work)
 const isExpoGo = Constants.appOwnership === 'expo';
+let _expoGoWarningShown = false;
 
 // Configure notification handler behavior (how notifications appear when app is in foreground)
 // Only if not in Expo Go
@@ -27,7 +28,10 @@ export async function registerForPushNotifications() {
   try {
     // Check if running in Expo Go - push notifications don't work there
     if (isExpoGo) {
-      console.log('⚠️ Push notifications are not supported in Expo Go. Please use a development build.');
+      if (!_expoGoWarningShown) {
+        console.log('⚠️ Push notifications are not supported in Expo Go. Please use a development build.');
+        _expoGoWarningShown = true;
+      }
       return null;
     }
 
@@ -62,7 +66,17 @@ export async function registerForPushNotifications() {
 
     return token;
   } catch (error) {
-    console.error('Error registering for push notifications:', error.message);
+    // If this is the known Expo Go Android removal error, show a single friendly note and return
+    const msg = error?.message || String(error);
+    if (msg.includes('Android Push notifications') || msg.includes('removed from Expo Go')) {
+      if (!_expoGoWarningShown) {
+        console.log('⚠️ Push notifications are not available in Expo Go on Android. Build a development client to enable them.');
+        _expoGoWarningShown = true;
+      }
+      return null;
+    }
+
+    console.error('Error registering for push notifications:', msg);
     return null;
   }
 }

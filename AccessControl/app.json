@@ -22,7 +22,13 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "backgroundColor": "#0D1117"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/eac-icon-24.svg"
@@ -56,6 +62,11 @@
       "BLUETOOTH_SCAN",
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "03ea581a-ec63-4942-afdd-104f5883b620"
+      }
+    }
   }
 }

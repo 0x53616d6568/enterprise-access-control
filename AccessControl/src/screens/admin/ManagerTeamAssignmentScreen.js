@@ -97,34 +97,47 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
 
   const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
-    container: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 32 },
-    header: { marginBottom: 24, paddingTop: 8 },
-    title: { color: colors.textPrimary, fontSize: 26, fontWeight: '600', marginBottom: 4 },
-    subtitle: { color: colors.textMuted, fontSize: 13 },
-    twoColumnLayout: { flexDirection: 'row', gap: 16, flex: 1 },
-    leftPanel: { flex: 1, minWidth: '40%' },
-    rightPanel: { flex: 1, minWidth: '40%' },
-    panelTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 0.5 },
-    managerCard: { backgroundColor: colors.bgCard, borderWidth: 2, borderRadius: 12, padding: 14, marginBottom: 12, borderColor: colors.border },
+    container: { paddingHorizontal: 20, paddingVertical: 18, paddingBottom: 36 },
+    header: { marginBottom: 18, paddingTop: 4 },
+    title: { color: colors.textPrimary, fontSize: 28, fontWeight: '700', marginBottom: 6, letterSpacing: -0.4 },
+    subtitle: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+    body: { gap: 14 },
+    sectionCard: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 14 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12 },
+    sectionTitleWrap: { flex: 1 },
+    panelTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+    panelSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+    sectionBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.border },
+    sectionBadgeText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
+    managerList: { gap: 10 },
+    managerCard: { backgroundColor: colors.bgDeep, borderWidth: 1, borderRadius: 14, padding: 14, borderColor: colors.border },
     managerCardSelected: { borderColor: colors.accent, backgroundColor: colors.accentBg },
-    managerName: { color: colors.textPrimary, fontSize: 14, fontWeight: '600', marginBottom: 4 },
-    managerMeta: { color: colors.textMuted, fontSize: 11 },
-    searchInput: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: colors.textPrimary, marginBottom: 12 },
-    membersContainer: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden', maxHeight: 350 },
-    memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: colors.bgDeep },
-    memberCheckbox: { width: 22, height: 22, borderWidth: 2, borderColor: colors.border, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+    managerName: { color: colors.textPrimary, fontSize: 14, fontWeight: '700', marginBottom: 4 },
+    managerMeta: { color: colors.textMuted, fontSize: 12 },
+    selectedManagerCard: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, marginBottom: 12 },
+    selectedManagerLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+    selectedManagerName: { color: colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 3 },
+    selectedManagerMeta: { color: colors.textMuted, fontSize: 12 },
+    searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 12 },
+    searchIcon: { marginTop: 1 },
+    searchInput: { flex: 1, color: colors.textPrimary, fontSize: 13, padding: 0 },
+    membersContainer: { backgroundColor: colors.bgDeep, borderWidth: 1, borderColor: colors.border, borderRadius: 16, overflow: 'hidden' },
+    memberItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+    memberCheckbox: { width: 22, height: 22, borderWidth: 2, borderColor: colors.border, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
     memberCheckboxActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-    memberName: { flex: 1, color: colors.textPrimary, fontSize: 12, fontWeight: '500' },
-    memberDept: { color: colors.textMuted, fontSize: 10 },
-    selectedCount: { paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.accentBg, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
-    selectedCountText: { color: colors.accent, fontWeight: '600', fontSize: 12 },
-    assignBtn: { backgroundColor: colors.accent, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 16 },
+    memberTextWrap: { flex: 1 },
+    memberName: { color: colors.textPrimary, fontSize: 13, fontWeight: '600', marginBottom: 2 },
+    memberDept: { color: colors.textMuted, fontSize: 11 },
+    selectedCount: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.bgCard, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
+    selectedCountText: { color: colors.accent, fontWeight: '700', fontSize: 12 },
+    assignBtn: { backgroundColor: colors.accent, paddingVertical: 15, borderRadius: 14, alignItems: 'center', marginTop: 14 },
     assignBtnDisabled: { opacity: 0.5 },
-    assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-    emptyState: { alignItems: 'center', paddingVertical: 40 },
+    assignBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+    emptyState: { alignItems: 'center', paddingVertical: 28 },
     emptyIcon: { marginBottom: 12 },
-    emptyText: { color: colors.textMuted, fontSize: 12 },
+    emptyText: { color: colors.textMuted, fontSize: 12, textAlign: 'center', lineHeight: 18 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
+    inlineMeta: { color: colors.textMuted, fontSize: 11, marginTop: 6 },
   });
 
   if (loading) {
@@ -151,88 +164,114 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
           <Text style={styles.subtitle}>Assign employees to managers</Text>
         </View>
 
-        {/* Two Column Layout */}
-        <View style={styles.twoColumnLayout}>
-          {/* Left: Managers */}
-          <View style={styles.leftPanel}>
-            <Text style={styles.panelTitle}>Managers</Text>
+        <View style={styles.body}>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleWrap}>
+                <Text style={styles.panelTitle}>Managers</Text>
+                <Text style={styles.panelSubtitle}>Pick one manager to assign or review a team.</Text>
+              </View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>{managers.length} total</Text>
+              </View>
+            </View>
+
             {managers.length > 0 ? (
-              managers.map(manager => (
-                <TouchableOpacity
-                  key={manager.user_id}
-                  style={[
-                    styles.managerCard,
-                    selectedManager?.user_id === manager.user_id && styles.managerCardSelected
-                  ]}
-                  onPress={() => handleSelectManager(manager)}
-                >
-                  <Text style={styles.managerName}>{manager.full_name}</Text>
-                  <Text style={styles.managerMeta}>{manager.email}</Text>
-                </TouchableOpacity>
-              ))
+              <View style={styles.managerList}>
+                {managers.map(manager => (
+                  <TouchableOpacity
+                    key={manager.user_id}
+                    style={[
+                      styles.managerCard,
+                      selectedManager?.user_id === manager.user_id && styles.managerCardSelected
+                    ]}
+                    onPress={() => handleSelectManager(manager)}
+                  >
+                    <Text style={styles.managerName}>{manager.full_name}</Text>
+                    <Text style={styles.managerMeta}>{manager.email}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="information-circle-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
-                <Text style={styles.emptyText}>No managers</Text>
+                <Text style={styles.emptyText}>No managers available right now.</Text>
               </View>
             )}
           </View>
 
-          {/* Right: Team Members */}
-          <View style={styles.rightPanel}>
-            <Text style={styles.panelTitle}>Team Members</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleWrap}>
+                <Text style={styles.panelTitle}>Team Members</Text>
+                <Text style={styles.panelSubtitle}>Search employees, then tap to select who should report to the manager.</Text>
+              </View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>{selectedMembers.length} selected</Text>
+              </View>
+            </View>
+
             {selectedManager ? (
               <>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search..."
-                  placeholderTextColor={colors.textMuted}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
+                <View style={styles.selectedManagerCard}>
+                  <Text style={styles.selectedManagerLabel}>Selected manager</Text>
+                  <Text style={styles.selectedManagerName}>{selectedManager.full_name}</Text>
+                  <Text style={styles.selectedManagerMeta}>{selectedManager.email}</Text>
+                  <Text style={styles.inlineMeta}>{selectedMembers.length} team member{selectedMembers.length !== 1 ? 's' : ''} picked</Text>
+                </View>
+
+                <View style={styles.searchWrap}>
+                  <Ionicons name="search-outline" size={16} color={colors.textMuted} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search employees"
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
 
                 {filteredUsers.length > 0 ? (
-                  <>
-                    <FlatList
-                      data={filteredUsers}
-                      scrollEnabled={false}
-                      keyExtractor={u => u.user_id.toString()}
-                      style={styles.membersContainer}
-                      renderItem={({ item: user, index }) => (
-                        <TouchableOpacity
+                  <FlatList
+                    data={filteredUsers}
+                    scrollEnabled={false}
+                    keyExtractor={u => u.user_id.toString()}
+                    style={styles.membersContainer}
+                    renderItem={({ item: user, index }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.memberItem,
+                          index === filteredUsers.length - 1 && { borderBottomWidth: 0 }
+                        ]}
+                        onPress={() => handleToggleMember(user.user_id)}
+                      >
+                        <View
                           style={[
-                            styles.memberItem,
-                            index === filteredUsers.length - 1 && { borderBottomWidth: 0 }
+                            styles.memberCheckbox,
+                            selectedMembers.includes(user.user_id) && styles.memberCheckboxActive
                           ]}
-                          onPress={() => handleToggleMember(user.user_id)}
                         >
-                          <View
-                            style={[
-                              styles.memberCheckbox,
-                              selectedMembers.includes(user.user_id) && styles.memberCheckboxActive
-                            ]}
-                          >
-                            {selectedMembers.includes(user.user_id) && (
-                              <Ionicons name="checkmark-sharp" size={14} color="#fff" />
-                            )}
-                          </View>
-                          <View>
-                            <Text style={styles.memberName}>{user.full_name}</Text>
-                            <Text style={styles.memberDept}>{user.department}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      )}
-                    />
-                    <View style={styles.selectedCount}>
-                      <Text style={styles.selectedCountText}>{selectedMembers.length} selected</Text>
-                    </View>
-                  </>
+                          {selectedMembers.includes(user.user_id) && (
+                            <Ionicons name="checkmark-sharp" size={14} color="#fff" />
+                          )}
+                        </View>
+                        <View style={styles.memberTextWrap}>
+                          <Text style={styles.memberName}>{user.full_name}</Text>
+                          <Text style={styles.memberDept}>{user.department}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                  />
                 ) : (
                   <View style={styles.emptyState}>
                     <Ionicons name="search-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
-                    <Text style={styles.emptyText}>No employees found</Text>
+                    <Text style={styles.emptyText}>No employees match that search.</Text>
                   </View>
                 )}
+
+                <View style={styles.selectedCount}>
+                  <Text style={styles.selectedCountText}>{selectedMembers.length} selected</Text>
+                </View>
 
                 <TouchableOpacity
                   style={[styles.assignBtn, assigning && styles.assignBtnDisabled]}
@@ -251,7 +290,7 @@ export default function ManagerTeamAssignmentScreen({ navigation }) {
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="arrow-back-outline" size={24} color={colors.textMuted} style={styles.emptyIcon} />
-                <Text style={styles.emptyText}>Select a manager</Text>
+                <Text style={styles.emptyText}>Select a manager to start assigning team members.</Text>
               </View>
             )}
           </View>

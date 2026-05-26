@@ -4,7 +4,7 @@ import { API } from '../constants/api';
 
 export const api = axios.create({
   baseURL: API.BASE_URL,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout (increased from 10s to handle face processing)
 });
 
 // Request interceptor — attach access token to every request
