@@ -84,7 +84,6 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
   const [capturedFrames, setCapturedFrames] = useState([]); // Array of base64 images
   const [isProcessing, setIsProcessing] = useState(false); // Background processing
   const [processingProgress, setProcessingProgress] = useState(''); // e.g. "Processing frame 1/3..."
-  const [countdownSeconds, setCountdownSeconds] = useState(0); // For delay between captures
   
   const cameraRef = useRef(null);
 
@@ -157,24 +156,12 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
     }
   };
 
-  // Countdown timer for delay between captures
-  React.useEffect(() => {
-    if (countdownSeconds <= 0) return;
-    
-    const timer = setTimeout(() => {
-      setCountdownSeconds(countdownSeconds - 1);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdownSeconds]);
-
   // Reset multi-frame capture state
   const resetCapture = () => {
     setFrameCount(0);
     setCapturedFrames([]);
     setIsProcessing(false);
     setProcessingProgress('');
-    setCountdownSeconds(0);
   };
 
   // Capture single frame and prepare for next
@@ -201,7 +188,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
       if (newFrameCount === 3) {
         console.log('All 3 frames captured, starting enrollment with background processing...');
         setStep(2);
-        setProcessingProgress('Processing frame 1/3...');
+        setProcessingProgress('Processing frames...');
         setIsProcessing(true);
 
         try {
@@ -230,9 +217,8 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
           );
         }
       } else {
-        // Show countdown before next capture
-        setCountdownSeconds(2); // 2 second delay to let user reposition
-        setProcessingProgress(`Frame ${newFrameCount}/3 captured. Prepare for next...`);
+        // Continue to next frame immediately (no countdown)
+        setProcessingProgress(`Frame ${newFrameCount}/3 captured. Click for next...`);
       }
     } catch (err) {
       Alert.alert('Capture failed', err.message || 'Could not capture photo.');
@@ -443,42 +429,23 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
                   Tilt your head slightly right
                 </Text>
               )}
-
-              {/* Countdown timer */}
-              {countdownSeconds > 0 && (
-                <View style={{ 
-                  marginTop: 12, 
-                  paddingTop: 12, 
-                  borderTopWidth: 1, 
-                  borderTopColor: colors.border,
-                  width: '100%',
-                  alignItems: 'center'
-                }}>
-                  <Text style={{ color: colors.accent, fontSize: 28, fontWeight: 'bold' }}>
-                    {countdownSeconds}
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
-                    seconds to reposition
-                  </Text>
-                </View>
-              )}
             </View>
 
             {/* Capture / Next button */}
             <TouchableOpacity
               style={[
                 styles.enrollBtn, 
-                (capturing || countdownSeconds > 0) && { opacity: 0.6 }
+                capturing && { opacity: 0.6 }
               ]}
               onPress={captureFrame}
-              disabled={capturing || countdownSeconds > 0}
+              disabled={capturing}
             >
               {capturing ? (
                 <ActivityIndicator color="#fff" />
               ) : frameCount === 0 ? (
-                <Text style={styles.enrollBtnText}>Capture Frame 1</Text>
+                <Text style={styles.enrollBtnText}>Click to Capture 1</Text>
               ) : frameCount < 3 ? (
-                <Text style={styles.enrollBtnText}>Next ({frameCount}/3)</Text>
+                <Text style={styles.enrollBtnText}>Click for Frame {frameCount + 1}</Text>
               ) : (
                 <Text style={styles.enrollBtnText}>Processing...</Text>
               )}
