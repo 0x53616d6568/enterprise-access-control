@@ -175,23 +175,33 @@ class DoorStation:
                 self.last_backend_line = backend_line
 
     def _safe_request_id(self, payload: Dict[str, Any]) -> Optional[str]:
-        return str(payload.get("requestId") or payload.get("request_id") or "") or None
+        request_id = str(payload.get("requestId") or payload.get("request_id") or "") or None
+        print(f"[ID] Extracted requestId: {request_id}, available: requestId={payload.get('requestId')}, request_id={payload.get('request_id')}")
+        return request_id
 
     def _safe_door_id(self, payload: Dict[str, Any], topic: str) -> Optional[str]:
         door_id = payload.get("doorId") or payload.get("door_id")
         if door_id is not None:
-            return str(door_id)
+            result = str(door_id)
+            print(f"[ID] Extracted doorId from payload: {result}")
+            return result
 
         parts = topic.split("/")
         if len(parts) >= 2 and parts[0] == "doors":
-            return parts[1]
+            result = parts[1]
+            print(f"[ID] Extracted doorId from topic '{topic}': {result}")
+            return result
 
+        print(f"[ID] ❌ Could not extract doorId from payload or topic '{topic}'")
         return None
 
     def _safe_token_hash(self, payload: Dict[str, Any]) -> Optional[str]:
         # Look for tokenHash first, then tokenId (which can be used as token hash)
         token_hash = payload.get("tokenHash") or payload.get("token_hash") or payload.get("tokenId") or payload.get("token_id")
-        return str(token_hash) if token_hash else None
+        result = str(token_hash) if token_hash else None
+        print(f"[TOKEN] Extracted tokenHash: {result}")
+        print(f"[TOKEN] Available fields: tokenHash={payload.get('tokenHash')}, token_hash={payload.get('token_hash')}, tokenId={payload.get('tokenId')}, token_id={payload.get('token_id')}")
+        return result
 
     def _open_camera(self) -> None:
         self.camera = cv2.VideoCapture(self.config.camera_index)
@@ -228,9 +238,12 @@ class DoorStation:
                 payload = json.loads(message.payload.decode("utf-8"))
             except Exception as exc:
                 self.set_status(status_line=f"Bad MQTT payload: {exc}")
+                print(f"[MQTT] ❌ Failed to parse payload: {exc}")
                 return
 
             payload["__topic"] = message.topic
+            print(f"\n[MQTT] ✅ Received message on topic: {message.topic}")
+            print(f"[MQTT] Payload: {json.dumps(payload, indent=2)}")
             self.request_queue.put(payload)
 
         def on_disconnect(client_ref, userdata, rc, properties=None):
@@ -266,26 +279,40 @@ class DoorStation:
         if not image_base64:
             raise RuntimeError("Could not encode camera frame")
 
+        print(f"[HF_SPACE] 📸 Encoded frame size: {len(image_base64)} bytes")
+        
         headers = {"Content-Type": "application/json"}
         if self.config.hf_space_api_key:
             headers["X-API-Key"] = self.config.hf_space_api_key
 
-        response = requests.post(
-            _join_url(self.config.hf_space_url, "/recognize"),
-            json={"image_base64": image_base64},
-            headers=headers,
-            timeout=60,
-        )
-        response.raise_for_status()
-        payload = response.json()
+        url = _join_url(self.config.hf_space_url, "/recognize")
+        print(f"[HF_SPACE] 📤 Sending to: {url}")
+        
+        try:
+            response = requests.post(
+                url,
+                json={"image_base64": image_base64},
+                headers=headers,
+                timeout=60,
+            )
+            print(f"[HF_SPACE] Response status: {response.status_code}")
+            response.raise_for_status()
+            payload = response.json()
+            print(f"[HF_SPACE] Response payload: {json.dumps(payload, indent=2)}")
 
-        if not payload.get("success"):
-            raise RuntimeError(payload.get("error", "HF Space recognition failed"))
+            if not payload.get("success"):
+                raise RuntimeError(payload.get("error", "HF Space recognition failed"))
 
-        data = payload.get("data", {})
-        similarity = float(data.get("similarity") or 0.0)
-        recognized_user_id = data.get("user_id")
-        authorized = bool(data.get("is_authorized")) and similarity >= self.config.face_threshold
+            data = payload.get("data", {})
+            similarity = float(data.get("similarity") or 0.0)
+            recognized_user_id = data.get("user_id")
+            authorized = bool(data.get("is_authorized")) and similarity >= self.config.face_threshold
+        except requests.exceptions.HTTPError as e:
+            print(f"[HF_SPACE] ❌ HTTP Error {e.response.status_code}: {e.response.text}")
+            raise
+        except Exception as e:
+            print(f"[HF_SPACE] ❌ Request failed: {e}")
+            raise
 
         return {
             "success": True,
@@ -301,7 +328,9 @@ class DoorStation:
         door_id = self._safe_door_id(request_payload, request_payload.get("__topic", ""))
 
         if not request_id or not token_hash or not door_id:
-            raise RuntimeError("MQTT request must include requestId, tokenHash, and doorId")
+            error_msg = f"MQTT request missing: requestId={request_id}, tokenHash={token_hash}, doorId={door_id}"
+            print(f"[BACKEND] ❌ {error_msg}")
+            raise RuntimeError(error_msg)
 
         backend_payload = {
             "tokenHash": str(token_hash),
@@ -313,13 +342,26 @@ class DoorStation:
         # Build URL using token-based endpoint (no JWT required)
         verify_url = f"{self.config.backend_verify_url}/{request_id}/face-auth/token"
 
-        response = requests.post(
-            verify_url,
-            json=backend_payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        return response.json()
+        print(f"\n[BACKEND] 📤 Sending verification request:")
+        print(f"[BACKEND] URL: {verify_url}")
+        print(f"[BACKEND] Payload: {json.dumps(backend_payload, indent=2)}")
+
+        try:
+            response = requests.post(
+                verify_url,
+                json=backend_payload,
+                timeout=30,
+            )
+            print(f"[BACKEND] Response status: {response.status_code}")
+            print(f"[BACKEND] Response body: {response.text}")
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            print(f"[BACKEND] ❌ HTTP Error {e.response.status_code}: {e.response.text}")
+            raise
+        except Exception as e:
+            print(f"[BACKEND] ❌ Request failed: {e}")
+            raise
 
     def _publish_response(self, request_payload: Dict[str, Any], recognition: Dict[str, Any], backend_result: Dict[str, Any]) -> None:
         if not self.mqtt_client:
@@ -347,27 +389,34 @@ class DoorStation:
         self.mqtt_client.publish(response_topic, json.dumps(message), qos=1, retain=False)
 
     def _process_request(self, request_payload: Dict[str, Any]) -> None:
+        print(f"\n[PROCESS] 🔄 Processing new request...")
         request_id = self._safe_request_id(request_payload)
         door_id = self._safe_door_id(request_payload, request_payload.get("__topic", ""))
 
         if not request_id or not door_id:
             self.set_status(status_line="Skipping malformed MQTT request")
+            print(f"[PROCESS] ❌ Malformed request: requestId={request_id}, doorId={door_id}")
             return
 
+        print(f"[PROCESS] ✅ Request validated: requestId={request_id}, doorId={door_id}")
         self.set_status(status_line=f"Processing request {request_id} for door {door_id}")
 
         frame = self._capture_latest_frame()
         if frame is None:
             self.set_status(status_line="No camera frame available yet")
+            print(f"[PROCESS] ❌ No camera frame available")
             return
 
         try:
+            print(f"[PROCESS] 📸 Sending frame to HuggingFace Space for recognition...")
             recognition = self._recognize_face(frame)
+            print(f"[PROCESS] ✅ HF Recognition result: user_id={recognition.get('recognized_user_id')}, similarity={recognition.get('similarity', 0.0):.3f}, authorized={recognition.get('authorized')}")
             self.set_status(
                 status_line=f"Request {request_id} on door {door_id}",
                 recognition_line=f"HF: user={recognition.get('recognized_user_id')} similarity={recognition.get('similarity', 0.0):.3f} authorized={recognition.get('authorized')}",
             )
         except Exception as exc:
+            print(f"[PROCESS] ❌ HF recognition failed: {exc}")
             self.set_status(status_line=f"HF recognition failed: {exc}")
             recognition = {
                 "success": False,
@@ -377,7 +426,9 @@ class DoorStation:
             }
 
         try:
+            print(f"[PROCESS] 📤 Sending verification to backend...")
             backend_result = self._post_backend_verification(request_payload, recognition)
+            print(f"[PROCESS] ✅ Backend verification successful")
             backend_data = backend_result.get("data", backend_result)
             self.set_status(
                 status_line=f"Backend: granted={backend_data.get('granted', False)} mqtt_sent={backend_data.get('mqtt_sent', False)}",
@@ -385,6 +436,7 @@ class DoorStation:
             )
             self._publish_response(request_payload, recognition, backend_result)
         except Exception as exc:
+            print(f"[PROCESS] ❌ Backend verification failed: {exc}")
             self.set_status(status_line=f"Backend verification failed: {exc}")
 
     def _request_worker(self) -> None:
