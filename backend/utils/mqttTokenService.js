@@ -48,6 +48,7 @@ const createMqttToken = async (userId, deviceName = 'MQTT Device') => {
 
     return {
       token,
+      tokenHash,
       displayToken: `${token.slice(0, 8)}...${token.slice(-4)}`, // For display only
       tokenId: result.insertId,
       expiresAt,

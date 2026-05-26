@@ -244,19 +244,21 @@ const requestDoorAccess = async (req, res, next) => {
     }
 
     // 1. Auto-generate or get existing MQTT token for user
-    let tokenId;
+    let tokenId, tokenHash;
     const [existingTokens] = await db.query(
-      `SELECT id, expires_at, is_revoked FROM mqtt_tokens WHERE user_id = ? AND is_revoked = 0 AND expires_at > NOW() LIMIT 1`,
+      `SELECT id, token_hash, expires_at, is_revoked FROM mqtt_tokens WHERE user_id = ? AND is_revoked = 0 AND expires_at > NOW() LIMIT 1`,
       [userId]
     );
 
     if (existingTokens.length) {
       // Use existing valid token
       tokenId = existingTokens[0].id;
+      tokenHash = existingTokens[0].token_hash;
     } else {
       // Create new token
       const tokenData = await createMqttToken(userId, 'auto-generated');
-      tokenId = tokenData.id;
+      tokenId = tokenData.tokenId;
+      tokenHash = tokenData.tokenHash;
     }
 
     // 2. Verify user has access to door
@@ -320,8 +322,8 @@ const requestDoorAccess = async (req, res, next) => {
       });
 
       // Publish face auth request to MQTT (for PC door station)
-      console.log(`[MQTT Face Auth] Publishing face auth request for doorId=${doorId}, userId=${userId}, requestId=${requestData.requestId}`);
-      publishFaceAuthRequest(doorId, userId, requestData.requestId, tokenId).catch(err => {
+      console.log(`[MQTT Face Auth] Publishing face auth request for doorId=${doorId}, userId=${userId}, requestId=${requestData.requestId}, tokenHash=${tokenHash}`);
+      publishFaceAuthRequest(doorId, userId, requestData.requestId, tokenHash).catch(err => {
         console.error('[MQTT] Failed to publish face auth request:', err.message);
       });
     } else {
