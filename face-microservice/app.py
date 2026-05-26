@@ -104,26 +104,36 @@ def enroll_face():
         data = request.get_json()
         
         if not data:
+            logger.error("[ENROLL] No request body")
             return jsonify({'success': False, 'error': 'Request body required'}), 400
         
         user_id = data.get('user_id')
         image_base64 = data.get('image_base64')
         
+        logger.info(f"[ENROLL] Starting enrollment for user {user_id}")
+        logger.debug(f"[ENROLL] Image base64 length: {len(image_base64) if image_base64 else 0} chars")
+        
         if not user_id or not image_base64:
+            logger.error(f"[ENROLL] Missing required fields: user_id={bool(user_id)}, image_base64={bool(image_base64)}")
             return jsonify({'success': False, 'error': 'user_id and image_base64 required'}), 400
         
         # Get model instance
+        logger.info(f"[ENROLL] Loading model...")
         model = get_model()
+        logger.info(f"[ENROLL] Model loaded")
         
         # Extract embedding from image
+        logger.info(f"[ENROLL] Extracting embedding from image...")
         embedding = model.extract_embedding(image_base64)
         
         if embedding is None:
+            logger.warning(f"[ENROLL] No face detected in image for user {user_id}")
             return jsonify({
                 'success': False,
                 'error': 'No face detected in image'
             }), 400
         
+        logger.info(f"[ENROLL] Face detected, saving embedding...")
         # Save embedding
         model.save_embedding(user_id, embedding)
         
@@ -132,6 +142,8 @@ def enroll_face():
         import numpy as np
         embedding_bytes = embedding.astype(np.float32).tobytes()
         embedding_base64 = base64.b64encode(embedding_bytes).decode('utf-8')
+        
+        logger.info(f"[ENROLL] ✅ Successfully enrolled user {user_id}")
         
         return jsonify({
             'success': True,
@@ -143,7 +155,8 @@ def enroll_face():
         }), 201
     
     except Exception as e:
-        logger.error(f"Enrollment error: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"[ENROLL] ❌ Enrollment error: {str(e)}")
+        logger.error(f"[ENROLL] Stack: {traceback.format_exc()}")
         return jsonify({
             'success': False,
             'error': str(e)

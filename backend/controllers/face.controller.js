@@ -28,16 +28,29 @@ const callFaceService = async (endpoint, method = 'POST', data = null) => {
     if (data) {
       const dataSize = JSON.stringify(data).length;
       console.log(`📤 Request size: ${(dataSize / 1024 / 1024).toFixed(2)}MB`);
+      if (data.image_base64) {
+        console.log(`📷 Image base64 length: ${data.image_base64.length} chars`);
+      }
       config.data = data;
     }
 
     const response = await axios(config);
-    console.log(`✅ Microservice response received`);
+    console.log(`✅ Microservice response received (status: ${response.status})`);
+    console.log(`   Response success: ${response.data?.success}`);
+    if (!response.data?.success) {
+      console.warn(`⚠️  Microservice returned success=false: ${response.data?.error}`);
+    }
     return response.data;
   } catch (err) {
     console.error(`❌ Face Service Error (${endpoint}):`, err.message);
     console.error(`   Code: ${err.code}`);
     console.error(`   URL: ${FACE_SERVICE_URL}${endpoint}`);
+    
+    // Log response details if available
+    if (err.response) {
+      console.error(`   Status: ${err.response.status}`);
+      console.error(`   Response data:`, JSON.stringify(err.response.data, null, 2));
+    }
     
     if (err.code === 'ECONNREFUSED') {
       throw new Error('Microservice connection refused. Is it running on ' + FACE_SERVICE_URL + '?');
@@ -61,9 +74,14 @@ const enrollFace = async (req, res, next) => {
   try {
     const { user_id, image_base64, model_version = 'arcface-r100' } = req.body;
 
+    console.log(`[FACE ENROLL] Starting enrollment for user ${user_id}`);
+
     if (!user_id || !image_base64) {
+      console.warn(`[FACE ENROLL] Missing required fields: user_id=${!!user_id}, image_base64=${!!image_base64}`);
       return error(res, 'user_id and image_base64 are required', 400);
     }
+
+    console.log(`[FACE ENROLL] Image base64 length: ${image_base64.length} chars`);
 
     // Verify user exists
     const [userCheck] = await db.query(
@@ -71,8 +89,12 @@ const enrollFace = async (req, res, next) => {
       [user_id]
     );
     if (!userCheck.length) {
+      console.warn(`[FACE ENROLL] User ${user_id} not found in database`);
       return error(res, 'User not found', 404);
     }
+
+    console.log(`[FACE ENROLL] User ${user_id} verified in database`);
+    console.log(`[FACE ENROLL] Calling microservice to extract embedding...`);
 
     // Call microservice to extract embedding
     const faceServiceResult = await callFaceService('/enroll', 'POST', {
@@ -80,11 +102,26 @@ const enrollFace = async (req, res, next) => {
       image_base64,
     });
 
+    console.log(`[FACE ENROLL] Microservice result:`, {
+      success: faceServiceResult.success,
+      hasData: !!faceServiceResult.data,
+      error: faceServiceResult.error,
+    });
+
     if (!faceServiceResult.success) {
-      return error(res, faceServiceResult.error || 'Face recognition failed', 400);
+      const errorMsg = faceServiceResult.error || 'Face recognition failed';
+      console.error(`[FACE ENROLL] Microservice returned error: ${errorMsg}`);
+      return error(res, errorMsg, 400);
     }
 
     const { embedding } = faceServiceResult.data;
+
+    if (!embedding) {
+      console.error(`[FACE ENROLL] Microservice returned success but no embedding in data`);
+      return error(res, 'No embedding returned from microservice', 500);
+    }
+
+    console.log(`[FACE ENROLL] Embedding received (${embedding.length} chars)`);
 
     // INSERT new embedding (supports multiple embeddings per user)
     const [insertResult] = await db.query(
@@ -99,6 +136,8 @@ const enrollFace = async (req, res, next) => {
       [user_id]
     );
 
+    console.log(`[FACE ENROLL] ✅ Successfully enrolled face for user ${user_id} (embedding ID: ${insertResult.insertId}, total: ${countResult[0].total})`);
+
     return success(res, { 
       user_id, 
       embedding_id: insertResult.insertId,
@@ -108,6 +147,8 @@ const enrollFace = async (req, res, next) => {
     }, 'Face profile updated', 201);
 
   } catch (err) { 
+    console.error(`[FACE ENROLL] ❌ Unexpected error:`, err.message);
+    console.error(`[FACE ENROLL] Stack:`, err.stack);
     next(err); 
   }
 };

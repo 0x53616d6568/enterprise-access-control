@@ -90,33 +90,51 @@ class FaceRecognitionModel:
             from io import BytesIO
             from PIL import Image
             
+            logger.info(f"[EXTRACT] Starting embedding extraction")
+            logger.debug(f"[EXTRACT] Image base64 length: {len(image_base64)} chars")
+            
             # Decode base64 image
+            logger.info(f"[EXTRACT] Decoding base64 image...")
             image_data = base64.b64decode(image_base64)
+            logger.debug(f"[EXTRACT] Image bytes: {len(image_data)} bytes")
+            
             image = Image.open(BytesIO(image_data))
+            logger.info(f"[EXTRACT] Image loaded: {image.size} pixels, mode={image.mode}")
             
             # Convert RGBA to RGB if needed
             if image.mode in ('RGBA', 'LA', 'P'):
+                logger.debug(f"[EXTRACT] Converting {image.mode} to RGB")
                 rgb_image = Image.new('RGB', image.size, (255, 255, 255))
                 rgb_image.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
                 image = rgb_image
             elif image.mode != 'RGB':
+                logger.debug(f"[EXTRACT] Converting {image.mode} to RGB")
                 image = image.convert('RGB')
             
             frame = np.array(image)
+            logger.info(f"[EXTRACT] Frame shape: {frame.shape}, dtype={frame.dtype}")
             
             # Detect faces on full frame (from your code)
+            logger.info(f"[EXTRACT] Running face detection...")
             faces = self.arcface.get(frame)
             
             if not faces:
+                logger.warning(f"[EXTRACT] No faces detected in image")
                 return None
+            
+            logger.info(f"[EXTRACT] {len(faces)} face(s) detected")
             
             # Get embedding from first face (from your enroll_face1.py)
             embedding = faces[0].embedding
+            logger.debug(f"[EXTRACT] Embedding shape: {embedding.shape}, dtype={embedding.dtype}")
+            
             embedding = embedding / np.linalg.norm(embedding)  # normalize (your code)
+            logger.info(f"[EXTRACT] Embedding normalized")
             
             return embedding.astype(np.float32)
         except Exception as e:
-            logger.error(f"Error extracting embedding: {str(e)}")
+            logger.error(f"[EXTRACT] ❌ Error extracting embedding: {str(e)}")
+            logger.error(f"[EXTRACT] Stack: {__import__('traceback').format_exc()}")
             raise
     
     def save_embedding(self, user_id: int, embedding: np.ndarray):
