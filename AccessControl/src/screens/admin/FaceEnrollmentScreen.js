@@ -319,14 +319,27 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
             onPress={async () => {
               if (!cameraRef.current) return;
               setCapturing(true);
+              setErrorMessage(null);
               try {
-                const photo = await cameraRef.current.takePictureAsync({
-                  quality: 0.8,
-                  base64: true,
-                });
-                handleEnrollment(photo.base64);
+                // Capture 3 frames at 300ms intervals for better accuracy (multi-frame enrollment)
+                const frames = [];
+                for (let i = 0; i < 3; i++) {
+                  console.log(`Capturing frame ${i + 1}/3...`);
+                  const photo = await cameraRef.current.takePictureAsync({
+                    quality: 0.95, // Increased from 0.8 for better image quality
+                    base64: true,
+                  });
+                  frames.push(photo.base64);
+                  
+                  // Wait 300ms between frames for natural variation
+                  if (i < 2) {
+                    await new Promise(r => setTimeout(r, 300));
+                  }
+                }
+                console.log(`Successfully captured ${frames.length} frames for multi-frame enrollment`);
+                handleEnrollment(frames); // Pass array of frames
               } catch (err) {
-                Alert.alert('Capture failed', err.message || 'Could not capture photo.');
+                Alert.alert('Capture failed', err.message || 'Could not capture photos.');
                 setCapturing(false);
               }
             }}
@@ -334,7 +347,7 @@ export default function FaceEnrollmentScreen({ navigation, route }) {
           >
             {capturing
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.enrollBtnText}>Capture &amp; Enroll</Text>
+              : <Text style={styles.enrollBtnText}>Capture &amp; Enroll (3 frames)</Text>
             }
           </TouchableOpacity>
         )}

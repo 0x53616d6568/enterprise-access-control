@@ -17,26 +17,40 @@ import { API } from '../constants/api';
 /**
  * Enroll a user's face profile
  * 
+ * Supports both single and multi-frame enrollment:
+ * - Single frame: Send one image for quick enrollment
+ * - Multi-frame: Send 3-5 frames for better accuracy (recommended)
+ * 
  * Flow:
- * 1. Capture image from camera (base64)
- * 2. Send to backend
- * 3. Backend sends to microservice for embedding extraction
- * 4. Microservice stores in database
+ * 1. Capture image(s) from camera (base64)
+ * 2. Send to backend (single or array)
+ * 3. Backend sends each to microservice for embedding extraction
+ * 4. Backend averages embeddings for multi-frame mode
  * 5. Backend stores in PostgreSQL
  * 
  * @param {number} userId - User ID to enroll
- * @param {string} base64Image - Base64 encoded image from camera
- * @returns {Promise<{user_id, enrolled_at, updated, message}>}
+ * @param {string|string[]} imageBase64 - Base64 encoded image(s) from camera
+ * @returns {Promise<{user_id, enrolled_at, frames_processed, message}>}
  */
-export const enrollUserFace = async (userId, base64Image) => {
+export const enrollUserFace = async (userId, imageBase64) => {
   if (!userId) throw new Error('User ID is required');
-  if (!base64Image) throw new Error('Image data is required');
+  if (!imageBase64) throw new Error('Image data is required');
 
   try {
-    const response = await api.post(API.FACE_ENROLL, {
+    // Support both single image and array of images
+    const payload = {
       user_id: userId,
-      image_base64: base64Image,
-    });
+    };
+
+    if (Array.isArray(imageBase64)) {
+      payload.images_base64 = imageBase64;
+      console.log(`Enrolling user ${userId} with ${imageBase64.length} frames (multi-frame mode)`);
+    } else {
+      payload.image_base64 = imageBase64;
+      console.log(`Enrolling user ${userId} with single frame`);
+    }
+
+    const response = await api.post(API.FACE_ENROLL, payload);
 
     return response.data.data;
   } catch (err) {

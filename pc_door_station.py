@@ -269,7 +269,7 @@ class DoorStation:
             return self.latest_frame.copy()
 
     def _encode_frame(self, frame: np.ndarray) -> Optional[str]:
-        ok, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        ok, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
         if not ok:
             return None
         return base64.b64encode(buffer.tobytes()).decode("ascii")

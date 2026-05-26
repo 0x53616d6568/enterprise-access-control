@@ -7,6 +7,57 @@ const FACE_SERVICE_URL = process.env.FACE_SERVICE_URL || 'http://localhost:5000'
 const FACE_SERVICE_API_KEY = process.env.FACE_SERVICE_API_KEY || 'your-secret-key-change-in-production';
 
 /**
+ * Average multiple embedding arrays
+ * Embeddings come as base64 strings, convert to arrays, average, and convert back
+ */
+const averageEmbeddings = (embeddingsList) => {
+  if (!embeddingsList || embeddingsList.length === 0) {
+    throw new Error('No embeddings to average');
+  }
+
+  if (embeddingsList.length === 1) {
+    return embeddingsList[0]; // No averaging needed
+  }
+
+  console.log(`[AVERAGE] Averaging ${embeddingsList.length} embeddings`);
+
+  // Convert all base64 embeddings to Float32Arrays
+  const arrays = embeddingsList.map((emb, idx) => {
+    try {
+      const buffer = Buffer.from(emb, 'base64');
+      const float32Array = new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
+      console.log(`[AVERAGE] Embedding ${idx + 1} size: ${float32Array.length} dimensions`);
+      return float32Array;
+    } catch (e) {
+      console.error(`[AVERAGE] Failed to convert embedding ${idx + 1}:`, e.message);
+      throw e;
+    }
+  });
+
+  // Verify all embeddings have same dimension
+  const dimension = arrays[0].length;
+  if (!arrays.every(arr => arr.length === dimension)) {
+    throw new Error(`Embedding dimension mismatch. Expected ${dimension}, got varying sizes`);
+  }
+
+  // Average element-wise
+  const averaged = new Float32Array(dimension);
+  for (let i = 0; i < dimension; i++) {
+    let sum = 0;
+    for (let j = 0; j < arrays.length; j++) {
+      sum += arrays[j][i];
+    }
+    averaged[i] = sum / arrays.length;
+  }
+
+  // Convert back to base64
+  const buffer = Buffer.from(averaged.buffer, averaged.byteOffset, averaged.byteLength);
+  const base64 = buffer.toString('base64');
+  console.log(`[AVERAGE] ✅ Averaged embedding (${base64.length} chars)`);
+  return base64;
+};
+
+/**
  * Call Face Recognition Microservice
  * Handles connection errors gracefully
  */
@@ -67,21 +118,31 @@ const callFaceService = async (endpoint, method = 'POST', data = null) => {
 };
 
 // POST /api/face/enroll - Enroll a user's face
-// Expected: { user_id, image_base64, model_version }
-// The microservice handles embedding extraction
-// Now supports multiple embeddings per user
+// Expected: { user_id, image_base64, model_version } OR { user_id, images_base64: [...], model_version }
+// Supports single image or multiple images (will be averaged for better accuracy)
 const enrollFace = async (req, res, next) => {
   try {
-    const { user_id, image_base64, model_version = 'arcface-r100' } = req.body;
+    const { user_id, image_base64, images_base64, model_version = 'arcface-r100' } = req.body;
 
     console.log(`[FACE ENROLL] Starting enrollment for user ${user_id}`);
 
-    if (!user_id || !image_base64) {
-      console.warn(`[FACE ENROLL] Missing required fields: user_id=${!!user_id}, image_base64=${!!image_base64}`);
-      return error(res, 'user_id and image_base64 are required', 400);
+    if (!user_id) {
+      console.warn(`[FACE ENROLL] Missing user_id`);
+      return error(res, 'user_id is required', 400);
     }
 
-    console.log(`[FACE ENROLL] Image base64 length: ${image_base64.length} chars`);
+    // Support both single image and multiple images
+    let imagesToProcess = [];
+    if (images_base64 && Array.isArray(images_base64) && images_base64.length > 0) {
+      imagesToProcess = images_base64;
+      console.log(`[FACE ENROLL] Received ${imagesToProcess.length} images for enrollment (multi-frame mode)`);
+    } else if (image_base64) {
+      imagesToProcess = [image_base64];
+      console.log(`[FACE ENROLL] Received 1 image for enrollment (single-frame mode)`);
+    } else {
+      console.warn(`[FACE ENROLL] Missing image_base64 or images_base64`);
+      return error(res, 'image_base64 or images_base64 is required', 400);
+    }
 
     // Verify user exists
     const [userCheck] = await db.query(
@@ -94,40 +155,56 @@ const enrollFace = async (req, res, next) => {
     }
 
     console.log(`[FACE ENROLL] User ${user_id} verified in database`);
-    console.log(`[FACE ENROLL] Calling microservice to extract embedding...`);
 
-    // Call microservice to extract embedding
-    const faceServiceResult = await callFaceService('/enroll', 'POST', {
-      user_id,
-      image_base64,
-    });
+    // Process each image with microservice
+    const embeddings = [];
+    for (let i = 0; i < imagesToProcess.length; i++) {
+      const img = imagesToProcess[i];
+      console.log(`[FACE ENROLL] Processing image ${i + 1}/${imagesToProcess.length} (${img.length} chars)`);
+      
+      try {
+        const faceServiceResult = await callFaceService('/enroll', 'POST', {
+          user_id,
+          image_base64: img,
+        });
 
-    console.log(`[FACE ENROLL] Microservice result:`, {
-      success: faceServiceResult.success,
-      hasData: !!faceServiceResult.data,
-      error: faceServiceResult.error,
-    });
+        if (!faceServiceResult.success) {
+          throw new Error(faceServiceResult.error || 'Microservice failed');
+        }
 
-    if (!faceServiceResult.success) {
-      const errorMsg = faceServiceResult.error || 'Face recognition failed';
-      console.error(`[FACE ENROLL] Microservice returned error: ${errorMsg}`);
-      return error(res, errorMsg, 400);
+        embeddings.push(faceServiceResult.data.embedding);
+        console.log(`[FACE ENROLL] ✅ Extracted embedding ${i + 1}/${imagesToProcess.length}`);
+      } catch (err) {
+        console.error(`[FACE ENROLL] Failed to process image ${i + 1}:`, err.message);
+        if (imagesToProcess.length > 1) {
+          // If we have multiple images, we can skip one failure and continue
+          console.warn(`[FACE ENROLL] Continuing with remaining ${imagesToProcess.length - i - 1} images...`);
+          continue;
+        } else {
+          throw err;
+        }
+      }
     }
 
-    const { embedding } = faceServiceResult.data;
-
-    if (!embedding) {
-      console.error(`[FACE ENROLL] Microservice returned success but no embedding in data`);
-      return error(res, 'No embedding returned from microservice', 500);
+    if (embeddings.length === 0) {
+      console.error(`[FACE ENROLL] No embeddings extracted from any image`);
+      return error(res, 'Could not extract face embeddings from any image', 400);
     }
 
-    console.log(`[FACE ENROLL] Embedding received (${embedding.length} chars)`);
+    // Average embeddings if multiple
+    let finalEmbedding = embeddings[0];
+    if (embeddings.length > 1) {
+      console.log(`[FACE ENROLL] Averaging ${embeddings.length} embeddings for better accuracy...`);
+      finalEmbedding = averageEmbeddings(embeddings);
+    }
 
-    // INSERT new embedding (supports multiple embeddings per user)
+    console.log(`[FACE ENROLL] Final embedding (${finalEmbedding.length} chars)`);
+
+    // INSERT new embedding
     const [insertResult] = await db.query(
       `INSERT INTO face_embeddings (user_id, embedding, model_version, enrolled_at)
        VALUES (?, ?, ?, NOW())`,
-      [user_id, Buffer.from(embedding, 'base64'), model_version]
+      [user_id, Buffer.from(finalEmbedding, 'base64'), model_version]
     );
 
     // Count total embeddings for this user
@@ -136,14 +213,15 @@ const enrollFace = async (req, res, next) => {
       [user_id]
     );
 
-    console.log(`[FACE ENROLL] ✅ Successfully enrolled face for user ${user_id} (embedding ID: ${insertResult.insertId}, total: ${countResult[0].total})`);
+    console.log(`[FACE ENROLL] ✅ Successfully enrolled face for user ${user_id} (embedding ID: ${insertResult.insertId}, total: ${countResult[0].total}, frames: ${imagesToProcess.length})`);
 
     return success(res, { 
       user_id, 
       embedding_id: insertResult.insertId,
       total_embeddings: countResult[0].total,
+      frames_processed: imagesToProcess.length,
       enrolled_at: new Date(), 
-      message: `Face enrolled successfully (${countResult[0].total} total)`
+      message: `Face enrolled successfully with ${imagesToProcess.length} frame(s) (${countResult[0].total} total)`
     }, 'Face profile updated', 201);
 
   } catch (err) { 

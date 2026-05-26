@@ -18,7 +18,7 @@ load_dotenv()
 DB_HOST = os.getenv('DB_HOST', 'enterprise-access-control-sameh11-9619.e.aivencloud.com')
 DB_PORT = int(os.getenv('DB_PORT', 25223))
 DB_USER = os.getenv('DB_USER', 'avnadmin')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_PASSWORD = os.getenv('DB_PASSWORD')  # REQUIRED: Set via environment variable
 DB_NAME = os.getenv('DB_NAME', 'enterprise-access-control')
 
 FACE_DB_PATH = './face_database'
